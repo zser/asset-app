@@ -70,7 +70,12 @@
           "person": "哥哥",
           "color": "orange",
           "reward": "43433443",
-          "tasks": []
+          "tasks": [
+            {
+              "text": "44444",
+              "done": false
+            }
+          ]
         },
         {
           "person": "妹妹",
@@ -82,5 +87,5 @@
     }
   ],
   "wishHistory": [],
-  "updatedAt": "2026-05-14T07:58:57.807Z"
+  "updatedAt": "2026-05-14T08:05:25.574Z"
 }
