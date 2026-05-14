@@ -31,7 +31,29 @@
       "total": 15000
     }
   },
-  "wishes": [],
+  "wishes": [
+    {
+      "name": "突破400w",
+      "current": 0,
+      "target": 4000000,
+      "date": "2026-05-14",
+      "completeDate": "随缘",
+      "plans": [
+        {
+          "person": "哥哥",
+          "color": "orange",
+          "reward": "",
+          "tasks": []
+        },
+        {
+          "person": "妹妹",
+          "color": "green",
+          "reward": "",
+          "tasks": []
+        }
+      ]
+    }
+  ],
   "wishHistory": [],
-  "updatedAt": "2026-05-14T05:44:21.291Z"
+  "updatedAt": "2026-05-14T05:52:35.452Z"
 }
