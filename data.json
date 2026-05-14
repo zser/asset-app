@@ -1,6 +1,13 @@
 {
   "assetData": {
-    "stock": [],
+    "stock": [
+      {
+        "name": "东兴证券",
+        "amount": 2127000,
+        "icon": "fa-chart-line",
+        "color": "red"
+      }
+    ],
     "fund": [],
     "current": [],
     "deposit": []
@@ -8,5 +15,5 @@
   "profitData": {},
   "wishes": [],
   "wishHistory": [],
-  "updatedAt": "2026-05-14T04:16:40.576Z"
+  "updatedAt": "2026-05-14T04:20:05.121Z"
 }
