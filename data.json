@@ -52,8 +52,29 @@
           "tasks": []
         }
       ]
+    },
+    {
+      "name": "ewewewe",
+      "current": 0,
+      "target": 33333333,
+      "date": "2026-05-14",
+      "completeDate": "随缘",
+      "plans": [
+        {
+          "person": "哥哥",
+          "color": "orange",
+          "reward": "",
+          "tasks": []
+        },
+        {
+          "person": "妹妹",
+          "color": "green",
+          "reward": "",
+          "tasks": []
+        }
+      ]
     }
   ],
   "wishHistory": [],
-  "updatedAt": "2026-05-14T06:28:31.428Z"
+  "updatedAt": "2026-05-14T06:31:18.435Z"
 }
