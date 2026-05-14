@@ -40,7 +40,7 @@
   "wishes": [
     {
       "name": "三亚",
-      "current": 16000,
+      "current": 17000,
       "target": 100000,
       "date": "2026-05-14",
       "completeDate": "随缘",
@@ -61,5 +61,5 @@
     }
   ],
   "wishHistory": [],
-  "updatedAt": "2026-05-14T07:06:56.377Z"
+  "updatedAt": "2026-05-14T07:10:05.357Z"
 }
