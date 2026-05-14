@@ -39,36 +39,6 @@
   },
   "wishes": [
     {
-      "name": "突破400w",
-      "current": 0,
-      "target": 4000000,
-      "date": "2026-05-14",
-      "completeDate": "随缘",
-      "plans": [
-        {
-          "person": "哥哥",
-          "color": "orange",
-          "reward": "",
-          "tasks": [
-            {
-              "text": "676767",
-              "done": false
-            },
-            {
-              "text": "878787878",
-              "done": false
-            }
-          ]
-        },
-        {
-          "person": "妹妹",
-          "color": "green",
-          "reward": "",
-          "tasks": []
-        }
-      ]
-    },
-    {
       "name": "三亚",
       "current": 0,
       "target": 100000,
@@ -91,5 +61,5 @@
     }
   ],
   "wishHistory": [],
-  "updatedAt": "2026-05-14T06:45:20.206Z"
+  "updatedAt": "2026-05-14T06:49:57.421Z"
 }
