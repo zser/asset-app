@@ -24,6 +24,12 @@
         "amount": 170000,
         "icon": "fa-chart-line",
         "color": "red"
+      },
+      {
+        "name": "国投证券",
+        "amount": 80000,
+        "icon": "fa-chart-line",
+        "color": "red"
       }
     ],
     "fund": [],
@@ -113,5 +119,5 @@
     }
   ],
   "wishHistory": [],
-  "updatedAt": "2026-05-14T08:05:58.610Z"
+  "updatedAt": "2026-05-14T09:49:47.279Z"
 }
