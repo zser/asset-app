@@ -95,29 +95,8 @@
           ]
         }
       ]
-    },
-    {
-      "name": "55",
-      "current": 0,
-      "target": 4,
-      "date": "2026-05-14",
-      "completeDate": "随缘",
-      "plans": [
-        {
-          "person": "哥哥",
-          "color": "orange",
-          "reward": "344444444",
-          "tasks": []
-        },
-        {
-          "person": "妹妹",
-          "color": "green",
-          "reward": "2",
-          "tasks": []
-        }
-      ]
     }
   ],
   "wishHistory": [],
-  "updatedAt": "2026-05-14T09:49:47.279Z"
+  "updatedAt": "2026-05-14T10:23:41.655Z"
 }
