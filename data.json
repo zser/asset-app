@@ -1,0 +1,154 @@
+{
+  "assetData": {
+    "stock": [
+      {
+        "name": "平安证券",
+        "amount": 85000
+      },
+      {
+        "name": "华泰证券",
+        "amount": 62000
+      }
+    ],
+    "fund": [
+      {
+        "name": "哥哥基金",
+        "amount": 45000
+      },
+      {
+        "name": "妹妹基金",
+        "amount": 38000
+      }
+    ],
+    "current": [
+      {
+        "name": "支付宝还款",
+        "amount": 25000
+      },
+      {
+        "name": "微信还款",
+        "amount": 18000
+      }
+    ],
+    "deposit": [
+      {
+        "name": "招商银行",
+        "amount": 120000
+      },
+      {
+        "name": "工商银行",
+        "amount": 80000
+      },
+      {
+        "name": "建设银行",
+        "amount": 50000
+      }
+    ]
+  },
+  "profitData": {
+    "2026-05-01": {
+      "stock": 1200,
+      "fund": 300,
+      "total": 1500
+    },
+    "2026-05-02": {
+      "stock": -800,
+      "fund": 200,
+      "total": -600
+    },
+    "2026-05-03": {
+      "stock": 500,
+      "fund": -100,
+      "total": 400
+    },
+    "2026-05-04": {
+      "stock": 1500,
+      "fund": 600,
+      "total": 2100
+    },
+    "2026-05-05": {
+      "stock": -300,
+      "fund": -200,
+      "total": -500
+    },
+    "2026-05-06": {
+      "stock": 900,
+      "fund": 400,
+      "total": 1300
+    }
+  },
+  "wishes": [
+    {
+      "name": "三亚旅行",
+      "current": 15000,
+      "target": 30000,
+      "date": "2026-05-07",
+      "completeDate": "2026-12-31",
+      "plans": [
+        {
+          "person": "哥哥",
+          "color": "orange",
+          "reward": "一起看海！",
+          "tasks": [
+            {
+              "text": "每月存1000",
+              "done": true
+            },
+            {
+              "text": "预订机票",
+              "done": false
+            }
+          ]
+        },
+        {
+          "person": "妹妹",
+          "color": "green",
+          "reward": "拍美美的照片",
+          "tasks": [
+            {
+              "text": "每月存800",
+              "done": true
+            },
+            {
+              "text": "查酒店攻略",
+              "done": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "新笔记本",
+      "current": 5000,
+      "target": 12000,
+      "date": "2026-03-15",
+      "completeDate": "随缘",
+      "plans": [
+        {
+          "person": "哥哥",
+          "color": "orange",
+          "reward": "换新电脑效率翻倍",
+          "tasks": [
+            {
+              "text": "每月存500",
+              "done": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "wishHistory": [
+    {
+      "name": "日本旅行",
+      "target": 25000,
+      "completedDate": "2026-03-15"
+    },
+    {
+      "name": "生日礼物",
+      "target": 3000,
+      "completedDate": "2026-01-20"
+    }
+  ],
+  "updatedAt": "2026-05-14T04:09:48.973Z"
+}
