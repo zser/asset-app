@@ -58,8 +58,29 @@
           "tasks": []
         }
       ]
+    },
+    {
+      "name": "三亚",
+      "current": 0,
+      "target": 100000,
+      "date": "2026-05-14",
+      "completeDate": "随缘",
+      "plans": [
+        {
+          "person": "哥哥",
+          "color": "orange",
+          "reward": "",
+          "tasks": []
+        },
+        {
+          "person": "妹妹",
+          "color": "green",
+          "reward": "",
+          "tasks": []
+        }
+      ]
     }
   ],
   "wishHistory": [],
-  "updatedAt": "2026-05-14T06:39:49.177Z"
+  "updatedAt": "2026-05-14T06:40:06.389Z"
 }
