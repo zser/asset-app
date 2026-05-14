@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>资产管理</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1677ff">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --ant-primary: #1677ff;
+            --ant-primary-hover: #4096ff;
+            --ant-primary-active: #0958d9;
+            --ant-primary-bg: #e6f4ff;
+            --ant-primary-border: #91caff;
+            --ant-red: #ff4d4f;
+            --ant-red-bg: #fff1f0;
+            --ant-green: #52c41a;
+            --ant-green-bg: #f6ffed;
+            --ant-orange: #FA8C16;
+            --ant-warning: #FA8C16;
+            --ant-text: rgba(0,0,0,0.88);
+            --ant-text-secondary: rgba(0,0,0,0.65);
+            --ant-text-tertiary: rgba(0,0,0,0.45);
+            --ant-text-quaternary: rgba(0,0,0,0.25);
+            --ant-border: #d9d9d9;
+            --ant-border-hover: #4096ff;
+            --ant-bg: #f5f5f5;
+            --ant-bg-container: #ffffff;
+            --ant-bg-elevated: #ffffff;
+            --ant-radius: 8px;
+            --ant-radius-sm: 6px;
+            --ant-shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.03), 0 1px 6px -1px rgba(0,0,0,0.02), 0 2px 4px 0 rgba(0,0,0,0.02);
+            --ant-shadow: 0 6px 16px 0 rgba(0,0,0,0.08), 0 3px 6px -4px rgba(0,0,0,0.12), 0 9px 28px 8px rgba(0,0,0,0.05);
+            --ant-shadow-lg: 0 6px 16px 0 rgba(0,0,0,0.08), 0 3px 6px -4px rgba(0,0,0,0.12), 0 9px 28px 8px rgba(0,0,0,0.05), 0 12px 48px 16px rgba(0,0,0,0.03);
+        }
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; transition-timing-function: cubic-bezier(0.2, 0, 0, 1); }
+        .modal-show { display: flex !important; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji'; font-size: 14px; color: var(--ant-text); background: var(--ant-bg); }
+        .page { display: none; }
+        .page.active { display: block; animation: pageIn 0.25s cubic-bezier(0.2, 0, 0, 1); }
+        @keyframes pageIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+        .numpad-btn { transition: all 0.1s; }
+        .numpad-btn:active { transform: scale(0.95); background-color: var(--ant-bg); }
+        .tab-active { color: var(--ant-primary); position: relative; font-weight: 500; }
+        .tab-active::after { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); width: 24px; height: 2px; background: var(--ant-primary); border-radius: 1px; }
+        .calendar-day { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; border-radius: var(--ant-radius-sm); cursor: pointer; position: relative; padding: 3px 0; min-height: 42px; }
+        .calendar-day.has-data.positive { background: var(--ant-red-bg); }
+        .calendar-day.has-data.negative { background: var(--ant-green-bg); }
+        .calendar-day.today { border: 1.5px solid var(--ant-primary); background: white; }
+        .calendar-day .day-num { font-size: 12px; font-weight: 500; }
+        .calendar-day .day-profit { font-size: 9px; margin-top: 1px; }
+        .calendar-day.today .day-profit { color: var(--ant-primary); }
+        .progress-bar { height: 8px; border-radius: 4px; overflow: hidden; background: rgba(0,0,0,0.06); }
+        .progress-bar-done { height: 100%; background: linear-gradient(90deg, var(--ant-primary) 0%, var(--ant-primary-hover) 100%); border-radius: 4px; min-width: 2px; transition: width 0.3s cubic-bezier(0.2, 0, 0, 1); }
+        .wish-card { background: #f0f7ff; border: none; }
+        .spin-animation { animation: spin 0.8s ease; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .task-done { text-decoration: line-through; color: var(--ant-text-quaternary); }
+        .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.75); color: white; padding: 8px 24px; border-radius: var(--ant-radius-sm); z-index: 9999; font-size: 14px; animation: toastIn 0.2s ease; }
+        @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+        /* 左滑删除 */
+        .swipe-wrapper { overflow: hidden; position: relative; border-radius: var(--ant-radius); margin-bottom: 8px; }
+        .swipe-content { position: relative; z-index: 2; transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1); background: white; }
+        .swipe-delete { position: absolute; right: 0; top: 0; bottom: 0; width: 70px; background: var(--ant-red); color: white; display: flex; align-items: center; justify-content: center; z-index: 1; border-radius: 0 var(--ant-radius) var(--ant-radius) 0; font-size: 13px; cursor: pointer; }
+        /* Ant Design 输入框 */
+        .ant-input { width: 100%; border: 1px solid var(--ant-border); border-radius: var(--ant-radius-sm); padding: 4px 11px; font-size: 14px; color: var(--ant-text); transition: border-color 0.2s, box-shadow 0.2s; outline: none; line-height: 1.5714; }
+        .ant-input:hover { border-color: var(--ant-border-hover); }
+        .ant-input:focus { border-color: var(--ant-primary); box-shadow: 0 0 0 2px rgba(22,119,255,0.06); }
+        .ant-input::placeholder { color: var(--ant-text-quaternary); }
+        /* Ant Design 主按钮 */
+        .ant-btn-primary { background: var(--ant-primary); color: #fff; border: 1px solid var(--ant-primary); border-radius: var(--ant-radius-sm); padding: 5px 16px; font-size: 14px; font-weight: 400; cursor: pointer; transition: all 0.2s cubic-bezier(0.2, 0, 0, 1); line-height: 1.5714; }
+        .ant-btn-primary:hover { background: var(--ant-primary-hover); border-color: var(--ant-primary-hover); }
+        .ant-btn-primary:active { background: var(--ant-primary-active); border-color: var(--ant-primary-active); }
+        /* Ant Design 默认按钮 */
+        .ant-btn-default { background: #fff; color: var(--ant-text); border: 1px solid var(--ant-border); border-radius: var(--ant-radius-sm); padding: 5px 16px; font-size: 14px; cursor: pointer; transition: all 0.2s cubic-bezier(0.2, 0, 0, 1); line-height: 1.5714; }
+        .ant-btn-default:hover { color: var(--ant-primary-hover); border-color: var(--ant-primary-hover); }
+        /* Ant Design 卡片 */
+        .ant-card { background: var(--ant-bg-container); border-radius: var(--ant-radius); box-shadow: var(--ant-shadow-sm); border: 1px solid rgba(0,0,0,0.06); }
+        /* Ant Design 导航栏 */
+        .ant-nav-bar { background: #fff; padding: 0 16px; height: 44px; display: flex; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.06); }
+        .ant-nav-bar .ant-nav-bar-title { font-size: 17px; font-weight: 500; flex: 1; text-align: center; color: var(--ant-text); }
+        .ant-nav-bar .ant-nav-bar-back { color: var(--ant-text); font-size: 16px; cursor: pointer; padding: 8px; margin-left: -8px; }
+        .ant-nav-bar .ant-nav-bar-back:hover { color: var(--ant-primary); }
+        /* Ant Design 底部Tab */
+        .ant-tab-bar { background: #fff; border-top: 1px solid rgba(0,0,0,0.06); display: flex; justify-content: space-around; padding: 4px 0 calc(8px + env(safe-area-inset-bottom, 0px)); }
+        .ant-tab-bar-item { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--ant-text-tertiary); font-size: 10px; cursor: pointer; padding: 2px 16px; transition: color 0.2s; }
+        .ant-tab-bar-item.active { color: var(--ant-primary); }
+        .ant-tab-bar-item i { font-size: 24px; }
+        /* Ant Design 标签页 */
+        .ant-tabs-nav { display: flex; justify-content: space-around; border-bottom: 1px solid rgba(0,0,0,0.06); background: #fff; padding: 0 16px; }
+        .ant-tabs-tab { padding: 12px 0; font-size: 14px; color: var(--ant-text-tertiary); cursor: pointer; position: relative; transition: color 0.2s; }
+        .ant-tabs-tab.active { color: var(--ant-primary); font-weight: 500; }
+        .ant-tabs-tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 24px; height: 2px; background: var(--ant-primary); border-radius: 1px; }
+    </style>
+</head>
+<body class="min-h-screen max-w-md mx-auto" style="background:var(--ant-bg)">
+
+    <!-- ==================== 首页 ==================== -->
+    <div id="page-home" class="page active">
+        <!-- 总资产卡片 -->
+        <div class="mx-4 mt-3 p-5 text-white ant-card" style="background:linear-gradient(135deg, var(--ant-primary) 0%, var(--ant-primary-hover) 100%); border:none; box-shadow: 0 4px 12px rgba(22,119,255,0.3);">
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-sm" style="color:rgba(255,255,255,0.85)">总资产（元）</span>
+                <div class="flex items-center gap-2">
+                    <button onclick="showPage('page-settings')" class="hover:text-white" style="color:rgba(255,255,255,0.65)"><i class="fas fa-cog text-xs"></i></button>
+                    <button onclick="openEditSource()" class="text-xs px-3 py-1 rounded-full" style="background:rgba(255,255,255,0.2);color:#fff">编辑</button>
+                </div>
+            </div>
+            <div class="text-3xl font-bold mb-3" id="total-asset">0.00</div>
+            <div class="flex items-center gap-2" style="color:rgba(255,255,255,0.65)">
+                <button onclick="refreshData(this)" class="hover:text-white"><i class="fas fa-sync-alt text-xs"></i></button>
+                <p class="text-xs" id="last-update-time">最后更新：2026-05-07 10:15</p>
+                <span class="ml-auto text-[10px] flex items-center gap-1" id="home-sync-status" style="color:rgba(255,255,255,0.45)"><span class="w-1.5 h-1.5 rounded-full inline-block" style="background:rgba(255,255,255,0.4)"></span>未配置</span>
+            </div>
+            <!-- 分类占比 -->
+            <div class="grid grid-cols-4 gap-3 mt-4 pt-4" style="border-top:1px solid rgba(255,255,255,0.15)">
+                <div class="text-center">
+                    <div class="text-xs" style="color:rgba(255,255,255,0.65)">股票</div>
+                    <div class="font-bold text-sm mt-0.5" id="home-stock-amount">0</div>
+                    <div class="text-[10px]" style="color:rgba(255,255,255,0.45)" id="home-stock-pct">0%</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xs" style="color:rgba(255,255,255,0.65)">基金</div>
+                    <div class="font-bold text-sm mt-0.5" id="home-fund-amount">0</div>
+                    <div class="text-[10px]" style="color:rgba(255,255,255,0.45)" id="home-fund-pct">0%</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xs" style="color:rgba(255,255,255,0.65)">活期</div>
+                    <div class="font-bold text-sm mt-0.5" id="home-current-amount">0</div>
+                    <div class="text-[10px]" style="color:rgba(255,255,255,0.45)" id="home-current-pct">0%</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xs" style="color:rgba(255,255,255,0.65)">存款</div>
+                    <div class="font-bold text-sm mt-0.5" id="home-deposit-amount">0</div>
+                    <div class="text-[10px]" style="color:rgba(255,255,255,0.45)" id="home-deposit-pct">0%</div>
+                </div>
+            </div>
+        </div>
+        <!-- Tab切换 -->
+        <div class="mx-4 mt-4 ant-tabs-nav">
+            <button class="ant-tabs-tab active" data-tab="stock" onclick="switchHomeTab('stock')">股票</button>
+            <button class="ant-tabs-tab" data-tab="fund" onclick="switchHomeTab('fund')">基金</button>
+            <button class="ant-tabs-tab" data-tab="current" onclick="switchHomeTab('current')">活期</button>
+            <button class="ant-tabs-tab" data-tab="deposit" onclick="switchHomeTab('deposit')">存款</button>
+        </div>
+        <!-- Tab内容 -->
+        <div class="mx-4 mt-3 pb-20" id="home-tab-content"></div>
+    </div>
+
+    <!-- ==================== 编辑-选择数据源 ==================== -->
+    <div id="page-edit-source" class="page pb-20">
+        <div class="ant-nav-bar">
+            <button onclick="showPage('page-home')" class="ant-nav-bar-back"><i class="fas fa-chevron-left"></i></button>
+            <h1 class="ant-nav-bar-title">编辑</h1>
+            <span class="w-8"></span>
+        </div>
+        <div class="p-4">
+            <div class="ant-card overflow-hidden">
+                <div class="px-4 py-3 flex justify-between items-center cursor-pointer" style="border-bottom:1px solid rgba(0,0,0,0.06)" onclick="toggleSourceTypeDropdown()">
+                    <span class="text-sm" style="color:var(--ant-text-tertiary)">选择</span>
+                    <div class="flex items-center gap-1 text-sm" id="source-type-label">
+                        <span id="source-type-text">活期理财</span>
+                        <i class="fas fa-chevron-down text-xs" style="color:var(--ant-text-quaternary)" id="source-type-arrow"></i>
+                    </div>
+                </div>
+                <div id="source-type-dropdown" class="hidden" style="border-bottom:1px solid rgba(0,0,0,0.06);background:var(--ant-primary-bg)">
+                    <div class="flex flex-wrap gap-2 p-3">
+                        <button class="source-type-btn text-sm px-4 py-2 rounded-full ant-btn-primary" onclick="selectSourceType('current')">活期理财</button>
+                        <button class="source-type-btn text-sm px-4 py-2 rounded-full ant-btn-default" onclick="selectSourceType('stock')">股票</button>
+                        <button class="source-type-btn text-sm px-4 py-2 rounded-full ant-btn-default" onclick="selectSourceType('fund')">基金</button>
+                        <button class="source-type-btn text-sm px-4 py-2 rounded-full ant-btn-default" onclick="selectSourceType('deposit')">存款</button>
+                    </div>
+                </div>
+                <div class="divide-y" style="border-color:rgba(0,0,0,0.06)" id="source-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 编辑-输入数据源 ==================== -->
+    <div id="page-edit-amount" class="page">
+        <div class="ant-nav-bar">
+            <button onclick="showPage('page-edit-source')" class="ant-nav-bar-back"><i class="fas fa-chevron-left"></i></button>
+            <h1 class="ant-nav-bar-title">输入数据源</h1>
+            <span class="w-8"></span>
+        </div>
+        <div class="flex flex-col h-[calc(100vh-180px)]">
+            <div class="flex-1 flex flex-col items-center justify-center p-8">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="text-sm" style="color:var(--ant-text-tertiary)" id="amount-source-label">支付宝还款</span>
+                </div>
+                <div class="text-4xl font-bold" style="color:var(--ant-text)" id="amount-display">0</div>
+                <div class="text-xs mt-2" style="color:var(--ant-text-quaternary)">元</div>
+            </div>
+            <div class="bg-white border-t" style="border-color:rgba(0,0,0,0.06)">
+                <div class="grid grid-cols-4">
+                    <button class="numpad-btn py-5 text-xl font-medium border-r border-b" style="border-color:rgba(0,0,0,0.06)" onclick="inputNum('1')">1</button>
+                    <button class="numpad-btn py-5 text-xl font-medium border-r border-b" style="border-color:rgba(0,0,0,0.06)" onclick="inputNum('2')">2</button>
+                    <button class="numpad-btn py-5 text-xl font-medium border-r border-b" style="border-color:rgba(0,0,0,0.06)" onclick="inputNum('3')">3</button>
+                    <button class="numpad-btn py-5 text-xl font-medium border-b" style="background:var(--ant-primary);color:#fff" onclick="confirmAmount()"><i class="fas fa-check"></i></button>
+                    <button class="numpad-btn py-5 text-xl font-medium border-r border-b" style="border-color:rgba(0,0,0,0.06)" onclick="inputNum('4')">4</button>
+                    <button class="numpad-btn py-5 text-xl font-medium border-r border-b" style="border-color:rgba(0,0,0,0.06)" onclick="inputNum('5')">5</button>
+                    <button class="numpad-btn py-5 text-xl font-medium border-r border-b" style="border-color:rgba(0,0,0,0.06)" onclick="inputNum('6')">6</button>
+                    <button class="numpad-btn py-5 text-lg font-medium border-b" style="color:var(--ant-text-tertiary);border-color:rgba(0,0,0,0.06)" onclick="clearAmount()">C</button>
+                    <button class="numpad-btn py-5 text-xl font-medium border-r" style="border-color:rgba(0,0,0,0.06)" onclick="inputNum('7')">7</button>
+                    <button class="numpad-btn py-5 text-xl font-medium border-r" style="border-color:rgba(0,0,0,0.06)" onclick="inputNum('8')">8</button>
+                    <button class="numpad-btn py-5 text-xl font-medium border-r" style="border-color:rgba(0,0,0,0.06)" onclick="inputNum('9')">9</button>
+                    <button class="numpad-btn py-5 text-xl font-medium" style="color:var(--ant-text-tertiary)" onclick="deleteNum()"><i class="fas fa-backspace"></i></button>
+                    <button class="numpad-btn py-5 text-xl font-medium border-r" style="border-color:rgba(0,0,0,0.06)" onclick="inputNum('.')">.</button>
+                    <button class="numpad-btn py-5 text-xl font-medium border-r" style="border-color:rgba(0,0,0,0.06)" onclick="inputNum('0')">0</button>
+                    <button class="numpad-btn py-5 text-xl font-medium border-r" style="border-color:rgba(0,0,0,0.06)" onclick="inputNum('00')">00</button>
+                    <button class="numpad-btn py-5 text-xl font-medium" style="color:var(--ant-text-tertiary)" onclick="showPage('page-edit-source')"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 日历 ==================== -->
+    <div id="page-calendar" class="page pb-20">
+        <!-- 顶部标签栏 -->
+        <div class="ant-tabs-nav">
+            <button class="ant-tabs-tab" data-cal-period="month" onclick="switchCalendarPeriod('month')">本月</button>
+            <button class="ant-tabs-tab active" data-cal-period="year" onclick="switchCalendarPeriod('year')">今年</button>
+            <button class="ant-tabs-tab" data-cal-period="all" onclick="switchCalendarPeriod('all')">累计</button>
+        </div>
+        <!-- 收益概览卡片 -->
+        <div class="mx-4 mt-3 ant-card p-4">
+            <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs" style="color:var(--ant-text-tertiary)" id="cal-period-label">4月收益</span>
+            </div>
+            <div class="flex items-end justify-between">
+                <div>
+                    <span class="text-2xl font-bold" style="color:var(--ant-red)" id="cal-profit-value">+282.00</span>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs" style="color:var(--ant-text-tertiary)">收益率</div>
+                    <span class="text-sm font-semibold" style="color:var(--ant-red)" id="cal-profit-rate">+0.22%</span>
+                </div>
+            </div>
+            <div class="text-[10px] mt-2" style="color:var(--ant-text-quaternary)" id="cal-update-info">更新至2024-04-25</div>
+        </div>
+        <!-- 月份导航 + 类型切换 -->
+        <div class="flex items-center justify-between px-4 py-3">
+            <div class="flex items-center gap-2">
+                <button onclick="changeMonth(-1)" class="p-1"><i class="fas fa-chevron-left text-xs" style="color:var(--ant-text-tertiary)"></i></button>
+                <span class="font-semibold text-sm" id="calendar-title">2026年5月</span>
+                <button onclick="changeMonth(1)" class="p-1"><i class="fas fa-chevron-right text-xs" style="color:var(--ant-text-tertiary)"></i></button>
+            </div>
+            <div class="flex items-center gap-1 rounded-full px-3 py-1 cursor-pointer" style="background:var(--ant-primary-bg)" onclick="toggleCalTypeDropdown()">
+                <span class="text-xs font-medium" style="color:var(--ant-primary)" id="cal-type-text">总金额</span>
+                <i class="fas fa-chevron-down text-[8px]" style="color:var(--ant-primary)"></i>
+            </div>
+        </div>
+        <!-- 类型下拉 -->
+        <div id="cal-type-dropdown" class="hidden mx-4 mb-2 bg-white rounded-lg overflow-hidden" style="box-shadow:var(--ant-shadow)">
+            <button class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors" onclick="switchCalendarType('stock')">股票</button>
+            <button class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors" style="border-top:1px solid rgba(0,0,0,0.06)" onclick="switchCalendarType('fund')">基金</button>
+            <button class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors" style="border-top:1px solid rgba(0,0,0,0.06)" onclick="switchCalendarType('total')">总金额</button>
+        </div>
+        <!-- 日历区域 -->
+        <div class="mx-4 ant-card p-3">
+            <div class="grid grid-cols-7 mb-1">
+                <div class="text-center text-[10px] py-1" style="color:var(--ant-text-quaternary)">日</div>
+                <div class="text-center text-[10px] py-1" style="color:var(--ant-text-quaternary)">一</div>
+                <div class="text-center text-[10px] py-1" style="color:var(--ant-text-quaternary)">二</div>
+                <div class="text-center text-[10px] py-1" style="color:var(--ant-text-quaternary)">三</div>
+                <div class="text-center text-[10px] py-1" style="color:var(--ant-text-quaternary)">四</div>
+                <div class="text-center text-[10px] py-1" style="color:var(--ant-text-quaternary)">五</div>
+                <div class="text-center text-[10px] py-1" style="color:var(--ant-text-quaternary)">六</div>
+            </div>
+            <div class="grid grid-cols-7 gap-0.5" id="calendar-grid"></div>
+        </div>
+    </div>
+
+    <!-- ==================== 图表 ==================== -->
+    <div id="page-chart" class="page pb-20">
+        <div class="ant-nav-bar">
+            <button onclick="showPage('page-home')" class="ant-nav-bar-back"><i class="fas fa-chevron-left"></i></button>
+            <h1 class="ant-nav-bar-title">图表</h1>
+            <span class="w-8"></span>
+        </div>
+        <!-- 月/年切换 -->
+        <div class="ant-tabs-nav">
+            <button class="ant-tabs-tab active" data-chart-period="month" onclick="switchChartPeriod('month')">按月</button>
+            <button class="ant-tabs-tab" data-chart-period="year" onclick="switchChartPeriod('year')">按年</button>
+        </div>
+        <!-- 年份/月份选择器 -->
+        <div id="chart-year-picker" class="hidden bg-white px-4 py-2 flex items-center justify-center" style="border-bottom:1px solid rgba(0,0,0,0.06)">
+            <button onclick="changeChartYear(-1)" class="p-2"><i class="fas fa-chevron-left text-xs" style="color:var(--ant-text-tertiary)"></i></button>
+            <span class="font-semibold text-sm mx-4" id="chart-year-label">2026年</span>
+            <button onclick="changeChartYear(1)" class="p-2"><i class="fas fa-chevron-right text-xs" style="color:var(--ant-text-tertiary)"></i></button>
+        </div>
+        <div id="chart-month-picker" class="bg-white px-4 py-2 flex items-center justify-center" style="border-bottom:1px solid rgba(0,0,0,0.06)">
+            <button onclick="changeChartMonth(-1)" class="p-2"><i class="fas fa-chevron-left text-xs" style="color:var(--ant-text-tertiary)"></i></button>
+            <span class="font-semibold text-sm mx-4" id="chart-month-label">2026年5月</span>
+            <button onclick="changeChartMonth(1)" class="p-2"><i class="fas fa-chevron-right text-xs" style="color:var(--ant-text-tertiary)"></i></button>
+        </div>
+        <div class="p-4 space-y-4">
+            <!-- 环状图 - 资产占比 -->
+            <div class="ant-card p-4">
+                <h3 class="font-semibold mb-3 text-sm" style="color:var(--ant-text)">资产占比</h3>
+                <div class="flex items-center justify-center">
+                    <div class="relative w-40 h-40">
+                        <canvas id="chart-doughnut"></canvas>
+                        <div class="absolute inset-0 flex items-center justify-center flex-col">
+                            <span class="text-xs" style="color:var(--ant-text-tertiary)">总资产</span>
+                            <span class="text-sm font-bold" style="color:var(--ant-text)" id="chart-total-asset">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-center gap-4 mt-3">
+                    <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--ant-red)"></span><span class="text-xs" style="color:var(--ant-text-secondary)">股票</span></div>
+                    <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--ant-orange)"></span><span class="text-xs" style="color:var(--ant-text-secondary)">基金</span></div>
+                    <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--ant-primary)"></span><span class="text-xs" style="color:var(--ant-text-secondary)">活期</span></div>
+                    <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm" style="background:#6366f1"></span><span class="text-xs" style="color:var(--ant-text-secondary)">存款</span></div>
+                </div>
+            </div>
+            <!-- 柱状图 - 总资产走势 -->
+            <div class="ant-card p-4">
+                <h3 class="font-semibold mb-3 text-sm" style="color:var(--ant-text)" id="chart-bar-title">总资产走势（月）</h3>
+                <canvas id="chart-bar" height="200"></canvas>
+            </div>
+            <!-- 折线图 - 收益趋势分析 -->
+            <div class="ant-card p-4">
+                <h3 class="font-semibold mb-3 text-sm" style="color:var(--ant-text)" id="chart-line-title">收益趋势分析（月）</h3>
+                <canvas id="chart-line" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 心愿首页 ==================== -->
+    <div id="page-wish" class="page pb-20">
+        <div class="ant-nav-bar">
+            <button onclick="showPage('page-home')" class="ant-nav-bar-back"><i class="fas fa-chevron-left"></i></button>
+            <h1 class="ant-nav-bar-title">心愿</h1>
+            <button onclick="showPage('page-add-wish')" style="color:var(--ant-primary)"><i class="fas fa-plus"></i></button>
+        </div>
+        <div class="p-4" id="wish-list"></div>
+        <!-- 历史心愿 -->
+        <div class="px-4 pb-24">
+            <button onclick="toggleWishHistory()" class="text-sm py-2" style="color:var(--ant-primary)" id="wish-history-toggle">查看历史心愿 ▼</button>
+            <div id="wish-history" class="hidden mt-2"></div>
+        </div>
+    </div>
+
+    <!-- ==================== 心愿详情 ==================== -->
+    <div id="page-wish-detail" class="page pb-20">
+        <div class="ant-nav-bar">
+            <button onclick="showPage('page-wish')" class="ant-nav-bar-back"><i class="fas fa-chevron-left"></i></button>
+            <h1 class="ant-nav-bar-title" id="wish-detail-title">心愿详情</h1>
+            <button onclick="deleteCurrentWish()" style="color:var(--ant-red)"><i class="fas fa-trash"></i></button>
+        </div>
+        <div class="p-4" id="wish-detail-content"></div>
+    </div>
+
+    <!-- ==================== 添加心愿 ==================== -->
+    <div id="page-add-wish" class="page pb-20">
+        <div class="ant-nav-bar">
+            <button onclick="showPage('page-wish')" class="ant-nav-bar-back"><i class="fas fa-chevron-left"></i></button>
+            <h1 class="ant-nav-bar-title">添加心愿</h1>
+            <span class="w-8"></span>
+        </div>
+        <div class="p-4">
+            <div class="ant-card p-4 mb-4">
+                <div class="mb-4">
+                    <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">心愿名称</label>
+                    <input id="new-wish-name" type="text" class="ant-input" placeholder="例：三亚旅行">
+                </div>
+                <div class="mb-4">
+                    <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">目标金额</label>
+                    <input id="new-wish-target" type="number" class="ant-input" placeholder="0.00">
+                </div>
+                <div class="mb-4">
+                    <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">添加日期</label>
+                    <div class="relative">
+                        <input id="new-wish-date" type="text" class="ant-input pr-9" readonly placeholder="请选择日期" onclick="this.nextElementSibling.showPicker?.() || this.nextElementSibling.click()">
+                        <input type="date" class="absolute right-0 top-0 w-full h-full opacity-0" onchange="document.getElementById('new-wish-date').value=this.value" style="pointer-events:none">
+                        <i class="fas fa-calendar-alt absolute right-3 top-1/2 -translate-y-1/2" style="color:var(--ant-text-tertiary);pointer-events:none"></i>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">完成日期</label>
+                    <div class="flex gap-2 items-center">
+                        <div class="relative flex-1">
+                            <input id="new-wish-complete-date" type="text" class="ant-input pr-9" readonly placeholder="请选择日期" onclick="if(!this.disabled){this.nextElementSibling.showPicker?.() || this.nextElementSibling.click()}">
+                            <input type="date" class="absolute right-0 top-0 w-full h-full opacity-0" onchange="document.getElementById('new-wish-complete-date').value=this.value" style="pointer-events:none">
+                            <i class="fas fa-calendar-alt absolute right-3 top-1/2 -translate-y-1/2" style="color:var(--ant-text-tertiary);pointer-events:none"></i>
+                        </div>
+                        <button id="btn-random-date" onclick="toggleRandomDate()" class="ant-btn-default text-sm px-3 py-2">随缘</button>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="text-sm block mb-2" style="color:var(--ant-text-secondary)">参与人</label>
+                    <div class="space-y-3">
+                        <div style="border:1px solid rgba(0,0,0,0.06)" class="rounded-lg p-3">
+                            <label class="flex items-center gap-1 mb-2"><input type="checkbox" id="wish-person-brother" checked><span class="text-sm font-medium">哥哥</span></label>
+                            <input id="new-wish-reward-brother" type="text" class="ant-input text-xs" placeholder="达成后心愿...">
+                        </div>
+                        <div style="border:1px solid rgba(0,0,0,0.06)" class="rounded-lg p-3">
+                            <label class="flex items-center gap-1 mb-2"><input type="checkbox" id="wish-person-sister" checked><span class="text-sm font-medium">妹妹</span></label>
+                            <input id="new-wish-reward-sister" type="text" class="ant-input text-xs" placeholder="达成后心愿...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button onclick="addNewWish()" class="w-full ant-btn-primary py-2 rounded-lg font-medium">保存心愿</button>
+        </div>
+    </div>
+
+    <!-- ==================== 底部导航 ==================== -->
+    <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50 ant-tab-bar">
+        <button onclick="showPage('page-home')" class="ant-tab-bar-item active" data-nav="page-home">
+            <i class="fas fa-home"></i><span>首页</span>
+        </button>
+        <button onclick="showPage('page-calendar')" class="ant-tab-bar-item" data-nav="page-calendar">
+            <i class="fas fa-calendar"></i><span>日历</span>
+        </button>
+        <button onclick="showPage('page-chart')" class="ant-tab-bar-item" data-nav="page-chart">
+            <i class="fas fa-chart-pie"></i><span>图表</span>
+        </button>
+        <button onclick="showPage('page-wish')" class="ant-tab-bar-item" data-nav="page-wish">
+            <i class="fas fa-heart"></i><span>心愿</span>
+        </button>
+    </div>
+
+    <!-- ==================== 设置页 ==================== -->
+    <div id="page-settings" class="page pb-20">
+        <div class="ant-nav-bar">
+            <button onclick="showPage('page-home')" class="ant-nav-bar-back"><i class="fas fa-chevron-left"></i></button>
+            <h1 class="ant-nav-bar-title">设置</h1>
+            <span class="w-8"></span>
+        </div>
+        <div class="p-4 space-y-4">
+            <div class="ant-card p-4">
+                <h3 class="font-semibold mb-3 text-sm" style="color:var(--ant-text)">GitHub 同步配置</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs block mb-1" style="color:var(--ant-text-secondary)">Personal Access Token</label>
+                        <div class="relative">
+                            <input id="settings-token" type="password" class="ant-input pr-10" placeholder="ghp_xxxxxxxxxxxx">
+                            <button onclick="toggleTokenVisibility()" class="absolute right-2 top-1/2 -translate-y-1/2" style="color:var(--ant-text-tertiary)"><i id="token-eye-icon" class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs block mb-1" style="color:var(--ant-text-secondary)">仓库 Owner</label>
+                        <input id="settings-owner" type="text" class="ant-input" placeholder="GitHub 用户名">
+                    </div>
+                    <div>
+                        <label class="text-xs block mb-1" style="color:var(--ant-text-secondary)">仓库名称</label>
+                        <input id="settings-repo" type="text" class="ant-input" placeholder="asset-data">
+                    </div>
+                </div>
+                <div class="mt-4 flex gap-2">
+                    <button onclick="saveSettings()" class="flex-1 ant-btn-primary py-2 rounded-lg text-sm">保存配置</button>
+                    <button onclick="testGitHubConnection()" class="flex-1 ant-btn-default py-2 rounded-lg text-sm">测试连接</button>
+                </div>
+            </div>
+            <div class="ant-card p-4">
+                <h3 class="font-semibold mb-3 text-sm" style="color:var(--ant-text)">同步状态</h3>
+                <div class="flex items-center gap-2 mb-2">
+                    <span id="sync-status-dot" class="w-2 h-2 rounded-full" style="background:#d9d9d9"></span>
+                    <span id="sync-status-text" class="text-sm" style="color:var(--ant-text-secondary)">未配置</span>
+                </div>
+                <div class="text-xs" style="color:var(--ant-text-tertiary)" id="sync-last-time">-</div>
+                <div class="mt-3 flex gap-2">
+                    <button onclick="pullFromGitHub()" class="flex-1 ant-btn-default py-2 rounded-lg text-sm"><i class="fas fa-download mr-1"></i>拉取</button>
+                    <button onclick="pushToGitHub(true)" class="flex-1 ant-btn-default py-2 rounded-lg text-sm"><i class="fas fa-upload mr-1"></i>推送</button>
+                </div>
+            </div>
+            <div class="ant-card p-4">
+                <h3 class="font-semibold mb-2 text-sm" style="color:var(--ant-text)">关于</h3>
+                <div class="text-xs" style="color:var(--ant-text-tertiary)">家庭资产管理 v1.0<br>数据存储于 GitHub 私有仓库，两人共享同步。</div>
+            </div>
+            <div class="ant-card p-4" style="border-color:#ff4d4f">
+                <h3 class="font-semibold mb-2 text-sm" style="color:#ff4d4f">危险操作</h3>
+                <button onclick="clearAllData()" class="w-full py-2 rounded-lg text-sm" style="background:#fff1f0;color:#ff4d4f;border:1px solid #ffccc7">清空所有数据</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 添加数据源弹窗 ==================== -->
+    <div id="add-item-modal" class="fixed inset-0 z-50 items-end justify-center" style="display:none!important;background:rgba(0,0,0,0.45)">
+        <div class="bg-white rounded-t-lg w-full max-w-md p-5">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-semibold text-base" style="color:var(--ant-text)" id="add-item-title">添加数据源</h3>
+                <button onclick="closeAddItemModal()" style="color:var(--ant-text-tertiary)"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="mb-4">
+                <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">名称</label>
+                <input id="add-item-name" type="text" class="ant-input" placeholder="请输入数据源名称">
+            </div>
+            <div class="mb-4">
+                <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">金额（元）</label>
+                <input id="add-item-amount" type="number" class="ant-input" placeholder="0.00" inputmode="decimal">
+            </div>
+            <button onclick="confirmAddItem()" class="w-full ant-btn-primary py-2 rounded-lg font-medium">确定</button>
+        </div>
+    </div>
+
+    <!-- ==================== 日历输入弹窗 ==================== -->
+    <div id="calendar-modal" class="fixed inset-0 z-50 items-end justify-center" style="display:none!important;background:rgba(0,0,0,0.45)">
+        <div class="bg-white rounded-t-lg w-full max-w-md p-5">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-semibold text-base" style="color:var(--ant-text)" id="modal-date-title">输入收益</h3>
+                <button onclick="closeCalendarModal()" style="color:var(--ant-text-tertiary)"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="text-xs" style="color:var(--ant-text-tertiary)">股票收益</label>
+                    <input id="modal-stock-input" type="number" class="ant-input mt-1" placeholder="0.00">
+                </div>
+                <div>
+                    <label class="text-xs" style="color:var(--ant-text-tertiary)">基金收益</label>
+                    <input id="modal-fund-input" type="number" class="ant-input mt-1" placeholder="0.00">
+                </div>
+            </div>
+            <button onclick="saveCalendarProfit()" class="w-full ant-btn-primary py-2 rounded-lg font-medium">保存</button>
+        </div>
+    </div>
+
+    <!-- 存入金额弹窗 -->
+    <div id="deposit-modal" class="fixed inset-0 z-50 items-end justify-center" style="display:none!important;background:rgba(0,0,0,0.45)">
+        <div class="bg-white rounded-t-lg w-full max-w-md p-5">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-semibold text-base" style="color:var(--ant-text)" id="deposit-title">存入金额</h3>
+                <button onclick="closeDepositModal()" style="color:var(--ant-text-tertiary)"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="mb-3">
+                <div class="text-xs mb-1" style="color:var(--ant-text-tertiary)" id="deposit-info">已存 0 / 目标 0</div>
+                <input id="deposit-amount" type="number" class="ant-input" placeholder="输入存入金额" inputmode="decimal">
+            </div>
+            <div class="flex gap-2 mb-4">
+                <button onclick="addDepositQuick(100)" class="flex-1 py-2 rounded-lg text-sm" style="background:var(--ant-bg)">+100</button>
+                <button onclick="addDepositQuick(500)" class="flex-1 py-2 rounded-lg text-sm" style="background:var(--ant-bg)">+500</button>
+                <button onclick="addDepositQuick(1000)" class="flex-1 py-2 rounded-lg text-sm" style="background:var(--ant-bg)">+1000</button>
+                <button onclick="addDepositQuick(2000)" class="flex-1 py-2 rounded-lg text-sm" style="background:var(--ant-bg)">+2000</button>
+            </div>
+            <button onclick="saveDeposit()" class="w-full ant-btn-primary py-2 rounded-lg font-medium">确认存入</button>
+        </div>
+    </div>
+
+<script>
+// ============ GitHub 同步模块 ============
+const LS_DATA = 'asset-app-data';
+const LS_TOKEN = 'gh-token';
+const LS_OWNER = 'gh-owner';
+const LS_REPO = 'gh-repo';
+const LS_SHA = 'gh-sha';
+
+let isSyncing = false;
+
+function githubConfig() {
+    return {
+        token: localStorage.getItem(LS_TOKEN) || '',
+        owner: localStorage.getItem(LS_OWNER) || '',
+        repo: localStorage.getItem(LS_REPO) || ''
+    };
+}
+
+function isConfigured() {
+    const c = githubConfig();
+    return c.token && c.owner && c.repo;
+}
+
+function updateSyncStatus(status, color) {
+    const statusMap = {
+        'unconfigured': { text: '未配置', color: '#d9d9d9' },
+        'syncing': { text: '同步中...', color: '#1677ff' },
+        'synced': { text: '已同步', color: '#52c41a' },
+        'error': { text: '同步失败', color: '#ff4d4f' },
+        'offline': { text: '离线', color: '#faad14' }
+    };
+    const s = statusMap[status] || statusMap['unconfigured'];
+    const dot = document.getElementById('sync-status-dot');
+    const text = document.getElementById('sync-status-text');
+    const home = document.getElementById('home-sync-status');
+    if (dot) dot.style.background = s.color;
+    if (text) text.textContent = s.text;
+    if (home) home.innerHTML = `<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:${s.color}"></span>${s.text}`;
+}
+
+async function fetchFromGitHub() {
+    const c = githubConfig();
+    const res = await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}/contents/data.json`, {
+        headers: { Authorization: `token ${c.token}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    if (!res.ok) {
+        if (res.status === 404) return null; // 文件不存在
+        throw new Error(`GitHub API: ${res.status}`);
+    }
+    const data = await res.json();
+    const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+    return { content, sha: data.sha };
+}
+
+async function saveToGitHub(data, sha) {
+    const c = githubConfig();
+    const body = {
+        message: `Update data ${new Date().toISOString().slice(0, 10)}`,
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))))
+    };
+    if (sha) body.sha = sha;
+    const res = await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}/contents/data.json`, {
+        method: 'PUT',
+        headers: { Authorization: `token ${c.token}`, Accept: 'application/vnd.github.v3+json' },
+        body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || `HTTP ${res.status}`);
+    }
+    return await res.json();
+}
+
+function loadLocalData() {
+    try {
+        const saved = localStorage.getItem(LS_DATA);
+        if (saved) {
+            const data = JSON.parse(saved);
+            if (data.assetData) assetData = data.assetData;
+            if (data.profitData) profitData = data.profitData;
+            if (data.wishes) wishes = data.wishes;
+            if (data.wishHistory) wishHistory = data.wishHistory;
+        }
+    } catch (e) { console.error('loadLocalData error:', e); }
+}
+
+function saveLocalData() {
+    try {
+        localStorage.setItem(LS_DATA, JSON.stringify({
+            assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString()
+        }));
+    } catch (e) { console.error('saveLocalData error:', e); }
+}
+
+async function pullFromGitHub(showToast = false) {
+    if (!isConfigured()) { updateSyncStatus('unconfigured'); return; }
+    try {
+        updateSyncStatus('syncing');
+        const result = await fetchFromGitHub();
+        if (result) {
+            const data = result.content;
+            if (data.assetData) assetData = data.assetData;
+            if (data.profitData) profitData = data.profitData;
+            if (data.wishes) wishes = data.wishes;
+            if (data.wishHistory) wishHistory = data.wishHistory;
+            localStorage.setItem(LS_SHA, result.sha);
+            saveLocalData();
+            // 刷新当前页面数据（不触发 showPage，避免循环调用）
+            refreshCurrentPage();
+        }
+        updateSyncStatus('synced');
+        document.getElementById('sync-last-time').textContent = '最后同步：' + new Date().toLocaleString('zh-CN');
+        if (showToast) showToast('拉取成功');
+    } catch (e) {
+        updateSyncStatus('error');
+        if (showToast) showToast('拉取失败: ' + e.message);
+    }
+}
+
+async function pushToGitHub(showToast = false) {
+    if (!isConfigured()) { updateSyncStatus('unconfigured'); return; }
+    if (isSyncing) return;
+    isSyncing = true;
+    try {
+        updateSyncStatus('syncing');
+        const sha = localStorage.getItem(LS_SHA) || undefined;
+        const result = await saveToGitHub({ assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString() }, sha);
+        localStorage.setItem(LS_SHA, result.content.sha);
+        updateSyncStatus('synced');
+        document.getElementById('sync-last-time').textContent = '最后同步：' + new Date().toLocaleString('zh-CN');
+        if (showToast) showToast('推送成功');
+    } catch (e) {
+        // 409 冲突：重新拉取后再推
+        if (e.message && e.message.includes('SHA')) {
+            try {
+                const fresh = await fetchFromGitHub();
+                if (fresh) {
+                    localStorage.setItem(LS_SHA, fresh.sha);
+                    const result = await saveToGitHub({ assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString() }, fresh.sha);
+                    localStorage.setItem(LS_SHA, result.content.sha);
+                    updateSyncStatus('synced');
+                    if (showToast) showToast('推送成功');
+                    return;
+                }
+            } catch (e2) { e = e2; }
+        }
+        updateSyncStatus('error');
+        if (showToast) showToast('推送失败: ' + e.message);
+    } finally {
+        isSyncing = false;
+    }
+}
+
+function saveData() {
+    saveLocalData();
+    if (isConfigured()) pushToGitHub();
+}
+
+// 设置页相关
+function toggleTokenVisibility() {
+    const input = document.getElementById('settings-token');
+    const icon = document.getElementById('token-eye-icon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+
+function saveSettings() {
+    const token = document.getElementById('settings-token').value.trim();
+    const owner = document.getElementById('settings-owner').value.trim();
+    const repo = document.getElementById('settings-repo').value.trim();
+    if (!token || !owner || !repo) { showToast('请填写完整配置'); return; }
+    localStorage.setItem(LS_TOKEN, token);
+    localStorage.setItem(LS_OWNER, owner);
+    localStorage.setItem(LS_REPO, repo);
+    showToast('配置已保存');
+    updateSyncStatus('unconfigured');
+}
+
+async function testGitHubConnection() {
+    // 先保存表单值
+    const token = document.getElementById('settings-token').value.trim();
+    const owner = document.getElementById('settings-owner').value.trim();
+    const repo = document.getElementById('settings-repo').value.trim();
+    if (!token || !owner || !repo) { showToast('请填写完整配置'); return; }
+    localStorage.setItem(LS_TOKEN, token);
+    localStorage.setItem(LS_OWNER, owner);
+    localStorage.setItem(LS_REPO, repo);
+    showToast('测试中...');
+    try {
+        const result = await fetchFromGitHub();
+        if (result) {
+            showToast('连接成功，文件已存在');
+            localStorage.setItem(LS_SHA, result.sha);
+        } else {
+            const init = await saveToGitHub({ assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString() });
+            localStorage.setItem(LS_SHA, init.content.sha);
+            showToast('连接成功，已创建数据文件');
+        }
+        updateSyncStatus('synced');
+    } catch (e) {
+        showToast('连接失败: ' + e.message);
+    }
+}
+
+function loadSettingsForm() {
+    document.getElementById('settings-token').value = localStorage.getItem(LS_TOKEN) || '';
+    document.getElementById('settings-owner').value = localStorage.getItem(LS_OWNER) || '';
+    document.getElementById('settings-repo').value = localStorage.getItem(LS_REPO) || '';
+    // 如果已有配置，自动测试连接
+    if (isConfigured()) {
+        testGitHubConnection();
+    }
+}
+
+function clearAllData() {
+    if (!confirm('确定清空所有数据？此操作不可撤销！')) return;
+    assetData = { stock: [], fund: [], current: [], deposit: [] };
+    profitData = {};
+    wishes = [];
+    wishHistory = [];
+    localStorage.removeItem(LS_DATA);
+    if (isConfigured()) pushToGitHub();
+    showPage('page-home');
+    showToast('数据已清空');
+}
+
+// ============ 数据 ============
+let assetData = {
+    stock: [
+        { name: '平安证券', amount: 85000 },
+        { name: '华泰证券', amount: 62000 }
+    ],
+    fund: [
+        { name: '哥哥基金', amount: 45000 },
+        { name: '妹妹基金', amount: 38000 }
+    ],
+    current: [
+        { name: '支付宝还款', amount: 25000 },
+        { name: '微信还款', amount: 18000 }
+    ],
+    deposit: [
+        { name: '招商银行', amount: 120000 },
+        { name: '工商银行', amount: 80000 },
+        { name: '建设银行', amount: 50000 }
+    ]
+};
+
+let profitData = {
+    '2026-05-01': { stock: 1200, fund: 300, total: 1500 },
+    '2026-05-02': { stock: -800, fund: 200, total: -600 },
+    '2026-05-03': { stock: 500, fund: -100, total: 400 },
+    '2026-05-04': { stock: 1500, fund: 600, total: 2100 },
+    '2026-05-05': { stock: -300, fund: -200, total: -500 },
+    '2026-05-06': { stock: 900, fund: 400, total: 1300 }
+};
+
+let wishes = [
+    {
+        name: '三亚旅行', current: 15000, target: 30000,
+        date: '2026-05-07', completeDate: '2026-12-31',
+        plans: [
+            { person: '哥哥', color: 'orange', reward: '一起看海！', tasks: [
+                { text: '每月存1000', done: true },
+                { text: '预订机票', done: false }
+            ]},
+            { person: '妹妹', color: 'green', reward: '拍美美的照片', tasks: [
+                { text: '每月存800', done: true },
+                { text: '查酒店攻略', done: false }
+            ]}
+        ]
+    },
+    {
+        name: '新笔记本', current: 5000, target: 12000,
+        date: '2026-03-15', completeDate: '随缘',
+        plans: [
+            { person: '哥哥', color: 'orange', reward: '换新电脑效率翻倍', tasks: [
+                { text: '每月存500', done: false }
+            ]}
+        ]
+    }
+];
+
+let wishHistory = [
+    { name: '日本旅行', target: 25000, completedDate: '2026-03-15' },
+    { name: '生日礼物', target: 3000, completedDate: '2026-01-20' }
+];
+
+let currentHomeTab = 'stock';
+let currentCalendarType = 'total';
+let calendarModalDay = null;
+let currentAmount = '0';
+let calendarYear = 2026;
+let calendarMonth = 5;
+
+// 编辑功能状态
+let editSourceType = 'current';
+let editSelectedIndex = -1;
+let editIsNewItem = false;
+let currentWishIndex = -1;
+
+// ============ 页面切换 ============
+function showPage(pageId) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
+    // 更新底部导航高亮
+    document.querySelectorAll('[data-nav]').forEach(btn => {
+        btn.className = btn.dataset.nav === pageId
+            ? 'ant-tab-bar-item active'
+            : 'ant-tab-bar-item';
+    });
+    // 页面初始化
+    if (pageId === 'page-home') { renderHomeTabContent(); updateHomeSummary(); }
+    if (pageId === 'page-calendar') { renderCalendar(); updateCalSummary(); }
+    if (pageId === 'page-chart') { renderCharts(); }
+    if (pageId === 'page-wish') { renderWishList(); }
+    if (pageId === 'page-settings') { loadSettingsForm(); }
+    if (pageId === 'page-add-wish') { initAddWishForm(); }
+    // 切换 Tab 时拉取最新数据
+    if (isConfigured()) pullFromGitHub();
+}
+
+function refreshCurrentPage() {
+    const activePage = document.querySelector('.page.active');
+    if (!activePage) return;
+    const pageId = activePage.id;
+    if (pageId === 'page-home') { renderHomeTabContent(); updateHomeSummary(); }
+    if (pageId === 'page-calendar') { renderCalendar(); updateCalSummary(); }
+    if (pageId === 'page-chart') { renderCharts(); }
+    if (pageId === 'page-wish') { renderWishList(); }
+}
+
+// ============ 首页 ============
+function updateHomeSummary() {
+    let total = 0;
+    const catTotals = {};
+    Object.keys(assetData).forEach(cat => {
+        catTotals[cat] = assetData[cat].reduce((s, i) => s + i.amount, 0);
+        total += catTotals[cat];
+    });
+    document.getElementById('total-asset').textContent = total.toLocaleString('zh-CN', { minimumFractionDigits: 2 });
+    const cats = ['stock', 'fund', 'current', 'deposit'];
+    const labels = { stock: 'home-stock', fund: 'home-fund', current: 'home-current', deposit: 'home-deposit' };
+    cats.forEach(cat => {
+        const amt = document.getElementById(labels[cat] + '-amount');
+        const pct = document.getElementById(labels[cat] + '-pct');
+        if (amt) amt.textContent = Math.round(catTotals[cat]).toLocaleString();
+        if (pct) pct.textContent = total > 0 ? ((catTotals[cat] / total) * 100).toFixed(1) + '%' : '0%';
+    });
+}
+
+function switchHomeTab(tab) {
+    currentHomeTab = tab;
+    document.querySelectorAll('[data-tab]').forEach(btn => {
+        if (btn.dataset.tab === tab) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    renderHomeTabContent();
+}
+
+function renderHomeTabContent() {
+    const container = document.getElementById('home-tab-content');
+    const items = assetData[currentHomeTab] || [];
+    if (items.length === 0) {
+        container.innerHTML = '<div class="text-center py-10" style="color:var(--ant-text-tertiary)">暂无数据</div>';
+        // 仍然显示添加按钮
+        container.innerHTML += `<button onclick="try{openAddItemModal('${currentHomeTab}')}catch(e){alert('Error:'+e.message)}" class="w-full py-3 rounded-lg text-sm mt-1" style="background:var(--ant-primary-bg);color:var(--ant-primary);border:1.5px solid var(--ant-primary-border)">
+            <i class="fas fa-plus mr-1"></i>添加
+        </button>`;
+        return;
+    }
+    const catTotal = items.reduce((s, i) => s + i.amount, 0);
+    let html = '';
+    items.forEach((item, idx) => {
+        const pct = catTotal > 0 ? ((item.amount / catTotal) * 100).toFixed(1) : '0.0';
+        let iconHtml = getAssetIconHtml(item, currentHomeTab);
+        html += `<div class="swipe-wrapper" data-cat="${currentHomeTab}" data-idx="${idx}">
+            <div class="swipe-delete" onclick="deleteHomeItem('${currentHomeTab}', ${idx})"><i class="fas fa-trash mr-1"></i>删除</div>
+            <div class="swipe-content ant-card p-3 flex items-center gap-3" ontouchstart="onSwipeStart(event)" ontouchmove="onSwipeMove(event)" ontouchend="onSwipeEnd(event)">
+                ${iconHtml}
+                <div class="flex-1">
+                    <div class="font-medium text-sm" style="color:var(--ant-text)">${item.name}</div>
+                    <div class="text-xs" style="color:var(--ant-text-tertiary)">${pct}%</div>
+                </div>
+                <div class="text-right">
+                    <div class="font-semibold text-sm" style="color:var(--ant-text)">${item.amount.toLocaleString()}</div>
+                </div>
+            </div>
+        </div>`;
+    });
+    html += `<button onclick="try{openAddItemModal('${currentHomeTab}')}catch(e){alert('Error:'+e.message)}" class="w-full py-3 rounded-lg text-sm mt-1" style="background:var(--ant-primary-bg);color:var(--ant-primary);border:1.5px solid var(--ant-primary-border)">
+        <i class="fas fa-plus mr-1"></i>添加
+    </button>`;
+    container.innerHTML = html;
+}
+
+function getCategoryIconHtml(category) {
+    // 根据资产类别返回统一的图标HTML（统一使用 Font Awesome 普通图标）
+    const iconMap = {
+        stock:  { icon: 'fa-chart-line',      bg: 'bg-red-100',   color: 'text-red-500' },
+        fund:   { icon: 'fa-coins',           bg: 'bg-orange-100', color: 'text-orange-500' },
+        current: { icon: 'fa-wallet',          bg: 'bg-blue-100',  color: 'text-blue-500' },
+        deposit: { icon: 'fa-building-columns', bg: 'bg-purple-100', color: 'text-purple-500' }
+    };
+    const conf = iconMap[category] || iconMap['current'];
+    return `<div class="w-10 h-10 ${conf.bg} rounded-lg flex items-center justify-center"><i class="fas ${conf.icon} ${conf.color} text-lg"></i></div>`;
+}
+
+function getAssetIconHtml(item, category) {
+    // 优先使用 category 参数，否则尝试从 item 推断
+    // 但统一按类别使用图标，忽略 item.isAlipay / item.isWechat 等品牌标识
+    return getCategoryIconHtml(category);
+}
+
+function deleteHomeItem(cat, idx) {
+    const name = assetData[cat][idx].name;
+    assetData[cat].splice(idx, 1);
+    saveData();
+    renderHomeTabContent();
+    updateHomeSummary();
+    showToast('已删除「' + name + '」');
+}
+
+// ============ 添加数据源弹窗 ============
+let addItemCat = '';
+
+function openAddItemModal(cat) {
+    addItemCat = cat;
+    const labels = { stock: '股票', fund: '基金', current: '活期理财', deposit: '存款' };
+    document.getElementById('add-item-title').textContent = '添加' + labels[cat];
+    document.getElementById('add-item-name').value = '';
+    document.getElementById('add-item-amount').value = '';
+    var modal = document.getElementById('add-item-modal');
+    modal.classList.add('modal-show');
+    modal.style.cssText = 'display:flex!important;position:fixed;inset:0;z-index:9999;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.45)';
+}
+
+function closeAddItemModal() {
+    var modal = document.getElementById('add-item-modal');
+    modal.classList.remove('modal-show');
+    modal.style.cssText = 'display:none!important';
+}
+
+function confirmAddItem() {
+    const name = document.getElementById('add-item-name').value.trim();
+    const amount = parseFloat(document.getElementById('add-item-amount').value);
+    if (!name) { showToast('请输入名称'); return; }
+    if (isNaN(amount) || amount <= 0) { showToast('请输入金额'); return; }
+    const cat = addItemCat;
+    const iconMap = { stock:'fa-chart-line', fund:'fa-coins', current:'fa-wallet', deposit:'fa-building-columns' };
+    const colorMap = { stock:'red', fund:'orange', current:'blue', deposit:'purple' };
+    const newItem = { name: name, amount: amount, icon: iconMap[cat], color: colorMap[cat] };
+    assetData[cat].push(newItem);
+    saveData();
+    closeAddItemModal();
+    // 判断来源页面，刷新对应内容
+    const activePage = document.querySelector('.page.active');
+    if (activePage && activePage.id === 'page-edit-source') {
+        renderSourceList();
+    }
+    renderHomeTabContent();
+    updateHomeSummary();
+    showToast('添加成功');
+}
+
+// ============ 左滑删除手势 ============
+let swipeStartX = 0;
+let swipeStartY = 0;
+let swipeCurrentEl = null;
+let swipeOffset = 0;
+let isOpen = false;
+
+function onSwipeStart(e) {
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+    swipeCurrentEl = e.currentTarget;
+    swipeOffset = 0;
+    // 如果有其他卡片处于打开状态，先关闭
+    if (isOpen) {
+        document.querySelectorAll('.swipe-content').forEach(el => {
+            el.style.transform = 'translateX(0)';
+        });
+        isOpen = false;
+    }
+}
+
+function onSwipeMove(e) {
+    if (!swipeCurrentEl) return;
+    const dx = e.touches[0].clientX - swipeStartX;
+    const dy = e.touches[0].clientY - swipeStartY;
+    // 如果纵向滑动大于横向，不处理
+    if (Math.abs(dy) > Math.abs(dx)) return;
+    // 只处理左滑
+    if (dx > 0) {
+        swipeOffset = 0;
+    } else {
+        swipeOffset = Math.max(dx, -70);
+    }
+    swipeCurrentEl.style.transform = `translateX(${swipeOffset}px)`;
+    swipeCurrentEl.style.transition = 'none';
+}
+
+function onSwipeEnd(e) {
+    if (!swipeCurrentEl) return;
+    swipeCurrentEl.style.transition = 'transform 0.25s ease';
+    // 滑动超过35px就展开
+    if (swipeOffset < -35) {
+        swipeCurrentEl.style.transform = 'translateX(-70px)';
+        isOpen = true;
+    } else {
+        swipeCurrentEl.style.transform = 'translateX(0)';
+        isOpen = false;
+    }
+    swipeCurrentEl = null;
+    swipeOffset = 0;
+}
+
+function refreshData(btn) {
+    const icon = btn.querySelector('i');
+    icon.classList.add('spin-animation');
+    setTimeout(() => icon.classList.remove('spin-animation'), 800);
+    const now = new Date();
+    const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    document.getElementById('last-update-time').textContent = '最后更新：' + timeStr;
+    showToast('已刷新');
+}
+
+// ============ 编辑功能 ============
+function openEditSource() {
+    editSourceType = 'current';
+    editSelectedIndex = -1;
+    editIsNewItem = false;
+    document.getElementById('source-type-text').textContent = '活期理财';
+    // 重置按钮样式
+    document.querySelectorAll('.source-type-btn').forEach(btn => {
+        btn.className = 'source-type-btn text-sm px-4 py-2 rounded-full';
+        if (btn.textContent === '活期理财') {
+            btn.classList.add('ant-btn-primary');
+        } else {
+            btn.classList.add('ant-btn-default');
+        }
+    });
+    renderSourceList();
+    showPage('page-edit-source');
+}
+
+function toggleSourceTypeDropdown() {
+    const dd = document.getElementById('source-type-dropdown');
+    const arrow = document.getElementById('source-type-arrow');
+    dd.classList.toggle('hidden');
+    arrow.style.transform = dd.classList.contains('hidden') ? '' : 'rotate(180deg)';
+}
+
+function selectSourceType(type) {
+    editSourceType = type;
+    editSelectedIndex = -1;
+    editIsNewItem = false;
+    const labels = { current: '活期理财', stock: '股票', fund: '基金', deposit: '存款' };
+    document.getElementById('source-type-text').textContent = labels[type];
+    document.querySelectorAll('.source-type-btn').forEach(btn => {
+        btn.className = 'source-type-btn text-sm px-4 py-2 rounded-full';
+        if (btn.textContent === labels[type]) {
+            btn.classList.add('ant-btn-primary');
+        } else {
+            btn.classList.add('ant-btn-default');
+        }
+    });
+    document.getElementById('source-type-dropdown').classList.add('hidden');
+    document.getElementById('source-type-arrow').style.transform = '';
+    renderSourceList();
+}
+
+function renderSourceList() {
+    const listDiv = document.getElementById('source-list');
+    const items = assetData[editSourceType] || [];
+    let html = '';
+    items.forEach((item, idx) => {
+        const iconHtml = getAssetIconHtml(item, editSourceType);
+        html += `<div class="px-4 py-3 flex items-center gap-3 cursor-pointer transition-colors" style="border-bottom:1px solid rgba(0,0,0,0.04)" onclick="editExistingSource(${idx})">
+            ${iconHtml}
+            <div class="flex-1">
+                <span class="text-sm font-medium" style="color:var(--ant-text)">${item.name}</span>
+                <span class="text-xs ml-2" style="color:var(--ant-text-tertiary)">${item.amount.toLocaleString('zh-CN', {minimumFractionDigits: 2})}</span>
+            </div>
+            <button onclick="event.stopPropagation();deleteSourceItem(${idx})" class="p-1 rounded-full" style="color:var(--ant-red)" title="删除"><i class="fas fa-trash-alt text-xs"></i></button>
+            <i class="fas fa-chevron-right text-xs" style="color:var(--ant-text-quaternary)"></i>
+        </div>`;
+    });
+    html += `<div class="px-4 py-4 flex items-center justify-center cursor-pointer transition-colors" onclick="openEditAddModal()">
+        <div class="w-8 h-8 rounded-full flex items-center justify-center mr-2" style="background:var(--ant-primary-bg)">
+            <i class="fas fa-plus text-sm" style="color:var(--ant-primary)"></i>
+        </div>
+        <span class="text-sm" style="color:var(--ant-primary)">添加新数据源</span>
+    </div>`;
+    listDiv.innerHTML = html;
+}
+
+function selectSourceItem(idx) {
+    editSelectedIndex = idx;
+    editIsNewItem = false;
+    renderSourceList();
+}
+
+function selectNewSourceItem() {
+    editSelectedIndex = -1;
+    editIsNewItem = true;
+    renderSourceList();
+}
+
+function editExistingSource(idx) {
+    editSelectedIndex = idx;
+    editIsNewItem = false;
+    const item = assetData[editSourceType][idx];
+    document.getElementById('amount-source-label').textContent = item.name;
+    currentAmount = '0';
+    document.getElementById('amount-display').textContent = currentAmount;
+    showPage('page-edit-amount');
+}
+
+function openEditAddModal() {
+    const labels = { current: '活期理财', stock: '股票', fund: '基金', deposit: '存款' };
+    document.getElementById('add-item-title').textContent = '新增' + labels[editSourceType];
+    document.getElementById('add-item-name').value = '';
+    document.getElementById('add-item-amount').value = '';
+    var modal = document.getElementById('add-item-modal');
+    modal.classList.add('modal-show');
+    modal.style.cssText = 'display:flex!important;position:fixed;inset:0;z-index:9999;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.45)';
+    setTimeout(() => document.getElementById('add-item-name').focus(), 300);
+}
+
+function confirmEditAddItem() {
+    const name = document.getElementById('add-item-name').value.trim();
+    const amount = parseFloat(document.getElementById('add-item-amount').value);
+    if (!name) { showToast('请输入名称'); return; }
+    if (isNaN(amount) || amount <= 0) { showToast('请输入金额'); return; }
+    const cat = editSourceType;
+    const iconMap = { stock:'fa-chart-line', fund:'fa-coins', current:'fa-wallet', deposit:'fa-building-columns' };
+    const colorMap = { stock:'red', fund:'orange', current:'blue', deposit:'purple' };
+    const newItem = { name: name, amount: amount, icon: iconMap[cat], color: colorMap[cat] };
+    assetData[cat].push(newItem);
+    saveData();
+    closeAddItemModal();
+    renderSourceList();
+    renderHomeTabContent();
+    updateHomeSummary();
+    showToast('添加成功: ' + name);
+}
+
+function deleteSourceItem(idx) {
+    const items = assetData[editSourceType];
+    const name = items[idx].name;
+    items.splice(idx, 1);
+    saveData();
+    if (editSelectedIndex === idx) editSelectedIndex = -1;
+    else if (editSelectedIndex > idx) editSelectedIndex--;
+    renderSourceList();
+    renderHomeTabContent();
+    updateHomeSummary();
+    showToast('已删除「' + name + '」');
+}
+
+function confirmSourceSelection() {
+    // 编辑页不再需要"确定"按钮，保留函数防止报错
+    showPage('page-home');
+}
+
+function inputNum(n) {
+    if (n === '.' && currentAmount.includes('.')) return;
+    if (n === '00') {
+        if (currentAmount === '0') return;
+        currentAmount += '00';
+    } else if (currentAmount === '0' && n !== '.') {
+        currentAmount = n;
+    } else {
+        // 限制小数位
+        if (currentAmount.includes('.')) {
+            const parts = currentAmount.split('.');
+            if (parts[1].length >= 2) return;
+        }
+        currentAmount += n;
+    }
+    document.getElementById('amount-display').textContent = currentAmount;
+}
+
+function deleteNum() {
+    if (currentAmount.length <= 1) { currentAmount = '0'; }
+    else { currentAmount = currentAmount.slice(0, -1); }
+    document.getElementById('amount-display').textContent = currentAmount;
+}
+
+function clearAmount() {
+    currentAmount = '0';
+    document.getElementById('amount-display').textContent = currentAmount;
+}
+
+function confirmAmount() {
+    const amount = parseFloat(currentAmount);
+    if (isNaN(amount) || amount === 0) { showToast('请输入金额'); return; }
+    if (editSelectedIndex >= 0 && !editIsNewItem) {
+        assetData[editSourceType][editSelectedIndex].amount = amount;
+        saveData();
+        showToast('已更新: ' + assetData[editSourceType][editSelectedIndex].name);
+    }
+    updateHomeSummary();
+    renderHomeTabContent();
+    showPage('page-home');
+}
+
+// ============ 日历 ============
+let calPeriod = 'year'; // month / year / all
+
+function changeMonth(delta) {
+    calendarMonth += delta;
+    if (calendarMonth > 12) { calendarMonth = 1; calendarYear++; }
+    if (calendarMonth < 1) { calendarMonth = 12; calendarYear--; }
+    renderCalendar();
+}
+
+function switchCalendarPeriod(period) {
+    calPeriod = period;
+    document.querySelectorAll('[data-cal-period]').forEach(btn => {
+        if (btn.dataset.calPeriod === period) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    updateCalSummary();
+}
+
+function switchCalendarType(type) {
+    currentCalendarType = type;
+    const labels = { stock: '股票', fund: '基金', total: '总金额' };
+    document.getElementById('cal-type-text').textContent = labels[type];
+    document.getElementById('cal-type-dropdown').classList.add('hidden');
+    renderCalendar();
+    updateCalSummary();
+}
+
+function toggleCalTypeDropdown() {
+    document.getElementById('cal-type-dropdown').classList.toggle('hidden');
+}
+
+function updateCalSummary() {
+    // 根据当前周期计算收益和收益率
+    let totalProfit = 0;
+    let daysWithData = 0;
+    const now = new Date();
+    
+    Object.keys(profitData).forEach(dateStr => {
+        const d = new Date(dateStr);
+        let include = false;
+        
+        if (calPeriod === 'month') {
+            include = d.getFullYear() === calendarYear && d.getMonth() + 1 === calendarMonth;
+        } else if (calPeriod === 'year') {
+            include = d.getFullYear() === calendarYear;
+        } else {
+            include = true; // 累计
+        }
+        
+        if (include) {
+            const val = currentCalendarType === 'stock' ? profitData[dateStr].stock 
+                      : currentCalendarType === 'fund' ? profitData[dateStr].fund 
+                      : profitData[dateStr].total;
+            totalProfit += val;
+            daysWithData++;
+        }
+    });
+    
+    // 更新概览
+    const periodLabels = { month: calendarMonth + '月收益', year: calendarYear + '年收益', all: '累计收益' };
+    document.getElementById('cal-period-label').textContent = periodLabels[calPeriod];
+    
+    const profitEl = document.getElementById('cal-profit-value');
+    const rateEl = document.getElementById('cal-profit-rate');
+    
+    if (totalProfit >= 0) {
+        profitEl.textContent = '+' + totalProfit.toFixed(2);
+        profitEl.style.color = 'var(--ant-red)';
+        rateEl.textContent = '+' + (Math.random() * 2).toFixed(2) + '%';
+        rateEl.style.color = 'var(--ant-red)';
+    } else {
+        profitEl.textContent = totalProfit.toFixed(2);
+        profitEl.style.color = 'var(--ant-green)';
+        rateEl.textContent = '-' + (Math.random() * 2).toFixed(2) + '%';
+        rateEl.style.color = 'var(--ant-green)';
+    }
+    
+    // 更新日期
+    const updateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    document.getElementById('cal-update-info').textContent = '更新至' + updateStr;
+}
+
+function renderCalendar() {
+    document.getElementById('calendar-title').textContent = calendarYear + '年' + calendarMonth + '月';
+    const grid = document.getElementById('calendar-grid');
+    const firstDay = new Date(calendarYear, calendarMonth - 1, 1).getDay();
+    const daysInMonth = new Date(calendarYear, calendarMonth, 0).getDate();
+    const today = new Date();
+    let html = '';
+    // 空白
+    for (let i = 0; i < firstDay; i++) {
+        html += '<div class="calendar-day"></div>';
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${calendarYear}-${String(calendarMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const data = profitData[dateStr];
+        const isToday = today.getFullYear() === calendarYear && today.getMonth() + 1 === calendarMonth && today.getDate() === d;
+        let cls = 'calendar-day';
+        let profitHtml = '';
+        if (data) {
+            const val = currentCalendarType === 'stock' ? data.stock : currentCalendarType === 'fund' ? data.fund : data.total;
+            cls += ' has-data';
+            cls += val >= 0 ? ' positive' : ' negative';
+            const textColor = val >= 0 ? 'color:#ff4d4f' : 'color:#52c41a';
+            profitHtml = `<span class="day-profit" style="${textColor}">${val >= 0 ? '+' : ''}${val}</span>`;
+        }
+        if (isToday) cls += ' today';
+        html += `<div class="${cls}" onclick="openCalendarModal('${dateStr}')">
+            <span class="day-num ${isToday ? '' : ''}" style="${isToday ? 'color:var(--ant-primary)' : ''}">${d}</span>
+            ${profitHtml}
+        </div>`;
+    }
+    grid.innerHTML = html;
+    updateCalSummary();
+}
+
+function openCalendarModal(dateStr) {
+    calendarModalDay = dateStr;
+    const data = profitData[dateStr] || { stock: 0, fund: 0 };
+    document.getElementById('modal-date-title').textContent = dateStr + ' 收益';
+    document.getElementById('modal-stock-input').value = data.stock || '';
+    document.getElementById('modal-fund-input').value = data.fund || '';
+    var cmodal = document.getElementById('calendar-modal');
+    cmodal.classList.add('modal-show');
+    cmodal.style.cssText = 'display:flex!important;position:fixed;inset:0;z-index:9999;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.45)';
+}
+
+function closeCalendarModal() {
+    var cmodal = document.getElementById('calendar-modal');
+    cmodal.classList.remove('modal-show');
+    cmodal.style.cssText = 'display:none!important';
+}
+
+let depositWishIndex = -1;
+
+function openDepositModal(idx) {
+    depositWishIndex = idx;
+    const w = wishes[idx];
+    document.getElementById('deposit-title').textContent = '存入「' + w.name + '」';
+    document.getElementById('deposit-info').textContent = '已存 ' + w.current.toLocaleString() + ' / 目标 ' + w.target.toLocaleString();
+    document.getElementById('deposit-amount').value = '';
+    var modal = document.getElementById('deposit-modal');
+    modal.classList.add('modal-show');
+    modal.style.cssText = 'display:flex!important;position:fixed;inset:0;z-index:9999;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.45)';
+}
+
+function closeDepositModal() {
+    var modal = document.getElementById('deposit-modal');
+    modal.classList.remove('modal-show');
+    modal.style.cssText = 'display:none!important';
+    depositWishIndex = -1;
+}
+
+function addDepositQuick(amount) {
+    const input = document.getElementById('deposit-amount');
+    const current = parseFloat(input.value) || 0;
+    input.value = current + amount;
+}
+
+function saveDeposit() {
+    if (depositWishIndex < 0) return;
+    const amount = parseFloat(document.getElementById('deposit-amount').value);
+    if (isNaN(amount) || amount <= 0) { showToast('请输入金额'); return; }
+    const idx = depositWishIndex;
+    wishes[idx].current += amount;
+    saveData();
+    closeDepositModal();
+    // 直接重新渲染详情页，不触发 showPage/pullFromGitHub
+    renderWishDetailContent(idx);
+    showToast('已存入 ' + amount.toLocaleString());
+}
+
+function renderWishDetailContent(idx) {
+    currentWishIndex = idx;
+    const w = wishes[idx];
+    document.getElementById('wish-detail-title').textContent = w.name;
+    const pct = Math.min(100, (w.current / w.target * 100)).toFixed(1);
+    const remaining = Math.max(0, w.target - w.current);
+    let html = `<div class="mb-4">
+        <div class="flex justify-between text-sm mb-1">
+            <span style="color:var(--ant-text-secondary)">进度</span><span style="color:var(--ant-text)">${pct}%</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-bar-done" style="width:${pct}%"></div>
+        </div>
+        <div class="flex justify-between text-xs mt-1" style="color:var(--ant-text-tertiary)">
+            <span>已存 ${w.current.toLocaleString()}</span>
+            <span>目标 ${w.target.toLocaleString()}</span>
+        </div>
+        <button onclick="openDepositModal(${idx})" class="w-full mt-3 py-2 rounded-lg text-sm font-medium" style="background:var(--ant-primary-bg);color:var(--ant-primary);border:1px solid var(--ant-primary-border)">
+            <i class="fas fa-plus mr-1"></i>存入${remaining > 0 ? '（还差 ' + remaining.toLocaleString() + '）' : '（已达成）'}
+        </button>
+    </div>`;
+    w.plans.forEach((plan, pi) => {
+        const planColor = plan.color === 'orange' ? 'border-color:rgba(250,140,22,0.3);background:rgba(250,140,22,0.04)' : 'border-color:rgba(82,196,26,0.3);background:rgba(82,196,26,0.04)';
+        html += `<div class="border rounded-lg p-3 mb-3" style="${planColor}">
+            <div class="flex justify-between items-center mb-2">
+                <span class="font-medium text-sm" style="color:var(--ant-text)">${plan.person}</span>
+                <button onclick="deleteWishPlan(${idx}, ${pi})" class="text-xs" style="color:var(--ant-text-quaternary)"><i class="fas fa-trash"></i></button>
+            </div>`;
+        plan.tasks.forEach((task, ti) => {
+            const doneClass = task.done ? 'task-done' : '';
+            const checkColor = task.done ? 'color:var(--ant-green)' : 'color:var(--ant-text-quaternary)';
+            html += `<div class="flex items-center gap-2 py-1">
+                <i class="fas ${task.done ? 'fa-check-circle' : 'fa-circle'} text-sm cursor-pointer" style="${checkColor}" onclick="toggleWishTask(${idx},${pi},${ti})"></i>
+                <span class="text-sm ${doneClass}" style="color:var(--ant-text-secondary)">${task.text}</span>
+            </div>`;
+        });
+        html += `<div class="mt-2 flex items-center gap-2">
+            <input id="new-task-${idx}-${pi}" type="text" class="ant-input flex-1 text-xs" style="padding:4px 8px" placeholder="添加任务">
+            <button onclick="addWishTask(${idx},${pi})" class="text-lg" style="color:var(--ant-primary)"><i class="fas fa-plus"></i></button>
+        </div></div>`;
+    });
+    html += `<button onclick="showPage('page-add-wish')" class="w-full py-2 border-2 border-dashed rounded-lg text-sm mt-1" style="border-color:rgba(0,0,0,0.15);color:var(--ant-text-tertiary)">
+        <i class="fas fa-plus mr-1"></i>添加计划
+    </button>`;
+    document.getElementById('wish-detail-content').innerHTML = html;
+}
+
+function saveCalendarProfit() {
+    const stock = parseFloat(document.getElementById('modal-stock-input').value) || 0;
+    const fund = parseFloat(document.getElementById('modal-fund-input').value) || 0;
+    profitData[calendarModalDay] = { stock, fund, total: stock + fund };
+    saveData();
+    closeCalendarModal();
+    renderCalendar();
+    showToast('已保存');
+}
+
+// ============ 图表 ============
+let chartPeriod = 'month'; // month / year
+let chartDoughnut = null, chartBar = null, chartLine = null;
+let chartYear = 2026;
+let chartMonth = 5;
+
+function changeChartYear(delta) {
+    chartYear += delta;
+    document.getElementById('chart-year-label').textContent = chartYear + '年';
+    renderCharts();
+}
+
+function changeChartMonth(delta) {
+    chartMonth += delta;
+    if (chartMonth > 12) { chartMonth = 1; chartYear++; }
+    if (chartMonth < 1) { chartMonth = 12; chartYear--; }
+    document.getElementById('chart-month-label').textContent = chartYear + '年' + chartMonth + '月';
+    renderCharts();
+}
+
+function switchChartPeriod(period) {
+    chartPeriod = period;
+    document.querySelectorAll('[data-chart-period]').forEach(btn => {
+        if (btn.dataset.chartPeriod === period) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    // 显示/隐藏选择器
+    document.getElementById('chart-year-picker').classList.toggle('hidden', period !== 'year');
+    document.getElementById('chart-month-picker').classList.toggle('hidden', period !== 'month');
+    // 更新标签
+    document.getElementById('chart-year-label').textContent = chartYear + '年';
+    document.getElementById('chart-month-label').textContent = chartYear + '年' + chartMonth + '月';
+    renderCharts();
+}
+
+function renderCharts() {
+    // 计算各分类总额
+    const catTotals = {};
+    Object.keys(assetData).forEach(cat => {
+        catTotals[cat] = assetData[cat].reduce((s, i) => s + i.amount, 0);
+    });
+    const totalAsset = catTotals.stock + catTotals.fund + catTotals.current + catTotals.deposit;
+    
+    // 更新环状图中间的总资产显示
+    document.getElementById('chart-total-asset').textContent = totalAsset.toLocaleString('zh-CN', {maximumFractionDigits: 0});
+    
+    // ===== 1. 环状图 - 资产占比 =====
+    const doughnutCtx = document.getElementById('chart-doughnut').getContext('2d');
+    if (chartDoughnut) chartDoughnut.destroy();
+    chartDoughnut = new Chart(doughnutCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['股票', '基金', '活期', '存款'],
+            datasets: [{
+                data: [catTotals.stock, catTotals.fund, catTotals.current, catTotals.deposit],
+                backgroundColor: ['#ff4d4f', '#fa8c16', '#1677ff', '#6366f1'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            cutout: '65%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    enabled: true,
+                    callbacks: {
+                        label: function(ctx) {
+                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                            const val = ctx.parsed;
+                            const pct = ((val / total) * 100).toFixed(1);
+                            return ctx.label + ': ' + val.toLocaleString() + '元 (' + pct + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // ===== 2. 柱状图 - 总资产走势 =====
+    const isMonth = chartPeriod === 'month';
+    const barTitle = document.getElementById('chart-bar-title');
+    barTitle.textContent = isMonth ? '总资产走势' : chartYear + '年总资产';
+
+    let barLabels, barData;
+    if (isMonth) {
+        // 按月：显示选中年每月总资产（无历史数据时，显示当前总资产）
+        barLabels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+        barData = barLabels.map((_, i) => {
+            if (i + 1 === chartMonth) return totalAsset; // 当前月用真实数据
+            return 0; // 其他月无数据
+        });
+    } else {
+        // 按年：只显示选中年，无历史数据
+        barLabels = [chartYear + '年'];
+        barData = [totalAsset];
+    }
+
+    const barCtx = document.getElementById('chart-bar').getContext('2d');
+    if (chartBar) chartBar.destroy();
+    chartBar = new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: barLabels,
+            datasets: [{
+                label: '总资产',
+                data: barData,
+                backgroundColor: '#1677ff',
+                borderRadius: 4,
+                barPercentage: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return (value / 10000).toFixed(0) + '万';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // ===== 3. 折线图 - 收益趋势分析 =====
+    const lineTitle = document.getElementById('chart-line-title');
+    lineTitle.textContent = isMonth ? '收益趋势分析' : chartYear + '年收益趋势';
+
+    let lineLabels, lineData;
+    if (isMonth) {
+        // 按月：从 profitData 聚合每月收益
+        lineLabels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+        lineData = lineLabels.map((_, i) => {
+            const month = i + 1;
+            let sum = 0;
+            Object.keys(profitData).forEach(dateStr => {
+                const d = new Date(dateStr);
+                if (d.getFullYear() === chartYear && d.getMonth() + 1 === month) {
+                    sum += profitData[dateStr].total || 0;
+                }
+            });
+            return sum;
+        });
+    } else {
+        // 按年：从 profitData 聚合每年收益
+        lineLabels = [];
+        lineData = [];
+        const years = new Set();
+        Object.keys(profitData).forEach(dateStr => years.add(new Date(dateStr).getFullYear()));
+        const sortedYears = Array.from(years).sort();
+        sortedYears.forEach(y => {
+            lineLabels.push(y + '年');
+            let sum = 0;
+            Object.keys(profitData).forEach(dateStr => {
+                const d = new Date(dateStr);
+                if (d.getFullYear() === y) sum += profitData[dateStr].total || 0;
+            });
+            lineData.push(sum);
+        });
+    }
+    
+    const colors = lineData.map(v => v >= 0 ? '#ff4d4f' : '#52c41a');
+    
+    const lineCtx = document.getElementById('chart-line').getContext('2d');
+    if (chartLine) chartLine.destroy();
+    chartLine = new Chart(lineCtx, {
+        type: 'line',
+        data: {
+            labels: lineLabels,
+            datasets: [{
+                label: '收益',
+                data: lineData,
+                borderColor: '#1677ff',
+                backgroundColor: 'rgba(22,119,255,0.08)',
+                tension: 0.3,
+                pointBackgroundColor: colors,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: 'nearest', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    enabled: true,
+                    callbacks: {
+                        label: function(ctx) {
+                            const v = ctx.parsed.y;
+                            return '收益: ' + (v >= 0 ? '+' : '') + v.toLocaleString() + '元';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return (value >= 0 ? '+' : '') + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ============ 心愿 ============
+function toggleWishHistory() {
+    const el = document.getElementById('wish-history');
+    const toggle = document.getElementById('wish-history-toggle');
+    if (el.classList.contains('hidden')) {
+        el.classList.remove('hidden');
+        toggle.textContent = '收起历史心愿 ▲';
+    } else {
+        el.classList.add('hidden');
+        toggle.textContent = '查看历史心愿 ▼';
+    }
+}
+
+function renderWishList() {
+    const list = document.getElementById('wish-list');
+    let html = '';
+    wishes.forEach((w, idx) => {
+        const pct = Math.min(100, (w.current / w.target * 100)).toFixed(1);
+        const displayDate = w.completeDate || w.date || '随缘';
+        html += `<div class="swipe-wrapper" data-cat="wish" data-idx="${idx}">
+            <div class="swipe-delete" onclick="deleteWish(${idx})"><i class="fas fa-trash mr-1"></i>删除</div>
+            <div class="swipe-content wish-card rounded-lg p-4 cursor-pointer" onclick="showWishDetail(${idx})" ontouchstart="onSwipeStart(event)" ontouchmove="onSwipeMove(event)" ontouchend="onSwipeEnd(event)">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-semibold" style="color:var(--ant-text)">${w.name}</span>
+                    <span class="text-xs" style="color:var(--ant-text-tertiary)">${displayDate}</span>
+                </div>
+                <div class="progress-bar mb-2">
+                    <div class="progress-bar-done" style="width:${pct}%"></div>
+                </div>
+                <div class="flex justify-between text-xs" style="color:var(--ant-text-tertiary)">
+                    <span>已存 ${w.current.toLocaleString()}</span>
+                    <span>目标 ${w.target.toLocaleString()} (${pct}%)</span>
+                </div>
+            </div>
+        </div>`;
+    });
+    list.innerHTML = html;
+    // 历史心愿
+    const history = document.getElementById('wish-history');
+    let hHtml = '';
+    wishHistory.forEach((w, idx) => {
+        hHtml += `<div class="rounded-lg p-3 mb-2 cursor-pointer" style="background:rgba(0,0,0,0.02)" onclick="showToast('${w.name} - 已于${w.completedDate}完成')">
+            <div class="flex justify-between items-center">
+                <span class="text-sm line-through" style="color:var(--ant-text-quaternary)">${w.name}</span>
+                <span class="text-xs" style="color:var(--ant-text-quaternary)">${w.completedDate}</span>
+            </div>
+        </div>`;
+    });
+    history.innerHTML = hHtml;
+}
+
+function showWishDetail(idx) {
+    renderWishDetailContent(idx);
+    // 切换页面（不触发 pullFromGitHub）
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-wish-detail').classList.add('active');
+}
+
+function toggleWishTask(wi, pi, ti) {
+    wishes[wi].plans[pi].tasks[ti].done = !wishes[wi].plans[pi].tasks[ti].done;
+    saveData();
+    renderWishDetailContent(wi);
+}
+
+function addWishTask(wi, pi) {
+    const input = document.getElementById('new-task-' + wi + '-' + pi);
+    if (!input || !input.value.trim()) return;
+    wishes[wi].plans[pi].tasks.push({ text: input.value.trim(), done: false });
+    saveData();
+    renderWishDetailContent(wi);
+}
+
+function deleteWish(idx) {
+    if (!confirm('确定删除此心愿？')) return;
+    const name = wishes[idx].name;
+    wishes.splice(idx, 1);
+    saveData();
+    renderWishList();
+    showToast('已删除「' + name + '」');
+}
+
+function deleteCurrentWish() {
+    if (currentWishIndex < 0) return;
+    if (!confirm('确定删除此心愿？')) return;
+    const name = wishes[currentWishIndex].name;
+    wishes.splice(currentWishIndex, 1);
+    saveData();
+    currentWishIndex = -1;
+    // 直接切换页面并渲染，不触发 pullFromGitHub
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-wish').classList.add('active');
+    document.querySelectorAll('[data-nav]').forEach(btn => {
+        btn.className = btn.dataset.nav === 'page-wish' ? 'ant-tab-bar-item active' : 'ant-tab-bar-item';
+    });
+    renderWishList();
+    showToast('已删除「' + name + '」');
+}
+
+function deleteWishPlan(wi, pi) {
+    wishes[wi].plans.splice(pi, 1);
+    saveData();
+    renderWishDetailContent(wi);
+    showToast('已删除计划');
+}
+
+function addWishPlan(wi) {
+    const person = prompt('参与人（哥哥/妹妹）');
+    if (!person || !person.trim()) return;
+    const color = person.trim() === '哥哥' ? 'orange' : 'green';
+    wishes[wi].plans.push({ person: person.trim(), color: color, tasks: [] });
+    saveData();
+    renderWishDetailContent(wi);
+}
+
+let isRandomDate = false;
+
+function toggleRandomDate() {
+    const input = document.getElementById('new-wish-complete-date');
+    const btn = document.getElementById('btn-random-date');
+    isRandomDate = !isRandomDate;
+    if (isRandomDate) {
+        input.disabled = true;
+        input.value = '';
+        input.placeholder = '随缘';
+        input.style.background = 'var(--ant-bg)';
+        input.style.color = 'var(--ant-text-tertiary)';
+        btn.textContent = '选择日期';
+        btn.className = 'ant-btn-primary text-sm px-3 py-2';
+    } else {
+        input.disabled = false;
+        input.placeholder = '';
+        input.style.background = '';
+        input.style.color = '';
+        btn.textContent = '随缘';
+        btn.className = 'ant-btn-default text-sm px-3 py-2';
+    }
+}
+
+function initAddWishForm() {
+    const today = new Date().toISOString().slice(0, 10);
+    // 设置默认添加日期为今天
+    const dateInput = document.getElementById('new-wish-date');
+    const dateHidden = dateInput.nextElementSibling;
+    dateInput.value = today;
+    if (dateHidden) dateHidden.value = today;
+    // 重置完成日期
+    const completeInput = document.getElementById('new-wish-complete-date');
+    const completeHidden = completeInput.nextElementSibling;
+    completeInput.value = '';
+    completeInput.disabled = false;
+    completeInput.style.background = '';
+    completeInput.style.color = '';
+    if (completeHidden) completeHidden.value = '';
+    document.getElementById('btn-random-date').textContent = '随缘';
+    document.getElementById('btn-random-date').className = 'ant-btn-default text-sm px-3 py-2';
+    isRandomDate = false;
+    // 重置其他字段
+    document.getElementById('new-wish-name').value = '';
+    document.getElementById('new-wish-target').value = '';
+    document.getElementById('wish-person-brother').checked = true;
+    document.getElementById('wish-person-sister').checked = true;
+    document.getElementById('new-wish-reward-brother').value = '';
+    document.getElementById('new-wish-reward-sister').value = '';
+}
+
+function addNewWish() {
+    const name = document.getElementById('new-wish-name').value.trim();
+    const target = parseFloat(document.getElementById('new-wish-target').value);
+    const date = document.getElementById('new-wish-date').value || new Date().toISOString().slice(0,10);
+    const completeDate = isRandomDate ? '随缘' : (document.getElementById('new-wish-complete-date').value || '随缘');
+    const hasBrother = document.getElementById('wish-person-brother').checked;
+    const hasSister = document.getElementById('wish-person-sister').checked;
+    if (!name) { showToast('请输入心愿名称'); return; }
+    if (isNaN(target) || target <= 0) { showToast('请输入目标金额'); return; }
+    const plans = [];
+    if (hasBrother) {
+        const reward = document.getElementById('new-wish-reward-brother').value.trim();
+        plans.push({ person: '哥哥', color: 'orange', reward: reward, tasks: [] });
+    }
+    if (hasSister) {
+        const reward = document.getElementById('new-wish-reward-sister').value.trim();
+        plans.push({ person: '妹妹', color: 'green', reward: reward, tasks: [] });
+    }
+    wishes.push({ name, current: 0, target, date, completeDate, plans });
+    saveData();
+    showToast('心愿已创建');
+    // 直接切换页面并渲染，不触发 pullFromGitHub
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-wish').classList.add('active');
+    document.querySelectorAll('[data-nav]').forEach(btn => {
+        btn.className = btn.dataset.nav === 'page-wish' ? 'ant-tab-bar-item active' : 'ant-tab-bar-item';
+    });
+    renderWishList();
+}
+
+// ============ Toast ============
+function showToast(msg) {
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2000);
+}
+
+// ============ 初始化 ============
+(async function init() {
+    // 1. 先加载本地缓存（快速渲染）
+    loadLocalData();
+
+    // 2. 渲染首页
+    showPage('page-home');
+
+    // 3. 如果已配置 GitHub，后台拉取远程数据
+    if (isConfigured()) {
+        updateSyncStatus('syncing');
+        try {
+            const result = await fetchFromGitHub();
+            if (result) {
+                const data = result.content;
+                if (data.assetData) assetData = data.assetData;
+                if (data.profitData) profitData = data.profitData;
+                if (data.wishes) wishes = data.wishes;
+                if (data.wishHistory) wishHistory = data.wishHistory;
+                localStorage.setItem(LS_SHA, result.sha);
+                saveLocalData();
+                refreshCurrentPage();
+            }
+            updateSyncStatus('synced');
+            document.getElementById('sync-last-time').textContent = '最后同步：' + new Date().toLocaleString('zh-CN');
+        } catch (e) {
+            console.error('GitHub pull error:', e);
+            updateSyncStatus('offline');
+        }
+    } else {
+        updateSyncStatus('unconfigured');
+    }
+})();
+
+// 注册 Service Worker
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(() => {
+        console.log('Service Worker registered');
+    }).catch(err => {
+        console.error('SW registration failed:', err);
+    });
+}
+</script>
+</body>
+</html>
