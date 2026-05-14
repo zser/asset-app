@@ -3,7 +3,7 @@
     "stock": [
       {
         "name": "东兴证券",
-        "amount": 55555,
+        "amount": 1210000,
         "icon": "fa-chart-line",
         "color": "red"
       },
@@ -33,5 +33,5 @@
   },
   "wishes": [],
   "wishHistory": [],
-  "updatedAt": "2026-05-14T05:43:56.815Z"
+  "updatedAt": "2026-05-14T05:44:21.291Z"
 }
