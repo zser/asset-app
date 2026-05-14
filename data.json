@@ -81,11 +81,16 @@
           "person": "妹妹",
           "color": "green",
           "reward": "545455454",
-          "tasks": []
+          "tasks": [
+            {
+              "text": "ggggh",
+              "done": false
+            }
+          ]
         }
       ]
     }
   ],
   "wishHistory": [],
-  "updatedAt": "2026-05-14T08:05:25.574Z"
+  "updatedAt": "2026-05-14T08:05:31.378Z"
 }
