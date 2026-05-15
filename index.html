@@ -133,8 +133,6 @@
     </style>
 </head>
 <body class="min-h-screen max-w-md mx-auto" style="background:var(--ant-bg)">
-    <!-- 调试面板：键盘遮挡排查用，确认修复后删除 -->
-    <div id="kb-debug" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(0,0,0,0.8);color:#0f0;font-size:11px;padding:4px 8px;font-family:monospace;display:none;pointer-events:none;line-height:1.4;"></div>
 
     <!-- ==================== 首页 ==================== -->
     <div id="page-home" class="page active">
@@ -143,12 +141,14 @@
             <div class="flex justify-between items-center mb-1">
                 <span class="text-sm" style="color:rgba(255,255,255,0.85)">总资产（元）</span>
                 <div class="flex items-center gap-2">
-                    <button onclick="toggleHideAmount()" class="hover:text-white" style="color:rgba(255,255,255,0.65)"><i id="eye-icon" class="fas fa-eye text-xs"></i></button>
-                    <button onclick="showPage('page-settings')" class="hover:text-white" style="color:rgba(255,255,255,0.65)"><i class="fas fa-cog text-xs"></i></button>
+                    <button onclick="showPage('page-settings')" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10" style="color:rgba(255,255,255,0.65)"><i class="fas fa-cog text-xs"></i></button>
                     <button onclick="openEditSource()" class="text-xs px-3 py-1 rounded-full" style="background:rgba(255,255,255,0.2);color:#fff">编辑</button>
                 </div>
             </div>
-            <div class="text-3xl font-bold mb-3" id="total-asset">0.00</div>
+            <div class="flex items-center gap-3 mb-3">
+                <div class="text-3xl font-bold" id="total-asset">0.00</div>
+                <button onclick="toggleHideAmount()" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10" style="color:rgba(255,255,255,0.65)"><i id="eye-icon" class="fas fa-eye text-xs"></i></button>
+            </div>
             <div class="flex items-center gap-2" style="color:rgba(255,255,255,0.65)">
                 <button onclick="refreshData(this)" class="hover:text-white"><i class="fas fa-sync-alt text-xs"></i></button>
                 <p class="text-xs" id="last-update-time">最后更新：-</p>
@@ -674,7 +674,7 @@
 // ============ GitHub 同步模块 ============
 const LS_DATA = 'asset-app-data';
 const LS_TOKEN = 'gh-token';
-const APP_VERSION = 'v2.0.9-debug';
+const APP_VERSION = 'v2.1.0';
 const LS_OWNER = 'gh-owner';
 const LS_REPO = 'gh-repo';
 const LS_SHA = 'gh-sha';
@@ -1954,20 +1954,9 @@ function recordModalInitVH(contentId) {
     if (!content) return;
 }
 
-// 调试面板显示
-function kbDebug(msg) {
-    const el = document.getElementById('kb-debug');
-    if (el) {
-        el.style.display = 'block';
-        el.textContent = msg;
-    }
-}
-
 function onModalInputFocus(contentId) {
     const content = document.getElementById(contentId);
     if (!content) return;
-
-    const debug = (msg) => kbDebug(`[${contentId}] ${msg}`);
 
     if (window.visualViewport) {
         const viewport = window.visualViewport;
@@ -1979,7 +1968,6 @@ function onModalInputFocus(contentId) {
             if (!activeEl || (activeEl.tagName !== 'INPUT' && activeEl.tagName !== 'TEXTAREA')) return;
 
             const inputRect = activeEl.getBoundingClientRect();
-            const contentRect = content.getBoundingClientRect();
             const currentVH = viewport.height;
             // 键盘高度 = 初始高度 - 当前高度
             const kbHeight = Math.max(0, initVH - currentVH);
@@ -1990,16 +1978,10 @@ function onModalInputFocus(contentId) {
             // 输入框被遮挡的高度
             const hiddenHeight = inputRect.bottom - visibleBottom;
 
-            debug(`initH=${initVH.toFixed(0)} vvH=${currentVH.toFixed(0)} kbH=${kbHeight.toFixed(0)} estKb=${estimatedKbHeight} iBot=${inputRect.bottom.toFixed(0)} visBot=${visibleBottom.toFixed(0)} hid=${hiddenHeight.toFixed(0)} sH=${screen.height}`);
-
-            // 使用估算的键盘高度来推算上推距离
             if (hiddenHeight > -10 || kbHeight === 0) {
-                // 如果 visualViewport 没变化，用估算的键盘高度全量上推
-                // 确保输入框完全可见：推到输入框底部距离可视底部至少 40px
                 const minPush = estimatedKbHeight + 40;
                 const pushAmount = kbHeight > 0 ? Math.max(hiddenHeight, 0) + 40 : minPush;
                 content.style.transform = `translateY(-${pushAmount}px)`;
-                debug(`PUSH: ${pushAmount}px (minPush=${minPush})`);
             } else {
                 content.style.transform = 'translateY(0)';
             }
@@ -2014,21 +1996,17 @@ function onModalInputFocus(contentId) {
         viewport.addEventListener('scroll', pushUpContent);
         content._kbHandler = pushUpContent;
 
-        debug(`init! initH=${initVH.toFixed(0)} sH=${screen.height}`);
         setTimeout(pushUpContent, 100);
         setTimeout(pushUpContent, 300);
         setTimeout(pushUpContent, 500);
         setTimeout(pushUpContent, 800);
     } else {
-        debug('NO visualViewport! using fallback');
         const initH = window.innerHeight;
         const resizeHandler = () => {
             const kbHeight = initH - window.innerHeight;
-            debug(`fallback: initH=${initH} curH=${window.innerHeight} kb=${kbHeight}`);
             if (kbHeight > 50) {
                 content.style.transform = `translateY(-${kbHeight * 0.5}px)`;
             } else {
-                // 估算键盘高度
                 content.style.transform = `translateY(-${screen.height * 0.25}px)`;
             }
         };
@@ -2055,9 +2033,6 @@ function resetModalPosition(contentId) {
         }
         content._kbHandler = null;
     }
-    // 隐藏调试面板
-    const dbg = document.getElementById('kb-debug');
-    if (dbg) dbg.style.display = 'none';
 }
 
 let depositWishIndex = -1;
