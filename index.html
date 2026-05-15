@@ -674,7 +674,7 @@
 // ============ GitHub 同步模块 ============
 const LS_DATA = 'asset-app-data';
 const LS_TOKEN = 'gh-token';
-const APP_VERSION = 'v2.0.7-debug';
+const APP_VERSION = 'v2.0.8-debug';
 const LS_OWNER = 'gh-owner';
 const LS_REPO = 'gh-repo';
 const LS_SHA = 'gh-sha';
@@ -1963,22 +1963,16 @@ function kbDebug(msg) {
     }
 }
 
-// 记录键盘弹出前的初始高度
-let _debugInitVH = 0;
-
 function onModalInputFocus(contentId) {
     const content = document.getElementById(contentId);
     if (!content) return;
-
-    // 记录 focus 时刻的 viewport 高度
-    if (!_debugInitVH) {
-        _debugInitVH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    }
 
     const debug = (msg) => kbDebug(`[${contentId}] ${msg}`);
 
     if (window.visualViewport) {
         const viewport = window.visualViewport;
+        // 记录初始高度
+        const initVH = viewport.height;
 
         const pushUpContent = () => {
             const activeEl = document.activeElement;
@@ -1986,14 +1980,23 @@ function onModalInputFocus(contentId) {
 
             const inputRect = activeEl.getBoundingClientRect();
             const contentRect = content.getBoundingClientRect();
-            const visibleBottom = viewport.height + viewport.offsetTop;
+            const currentVH = viewport.height;
+            // 键盘高度 = 初始高度 - 当前高度
+            const kbHeight = Math.max(0, initVH - currentVH);
+            // 如果 visualViewport 没变化，用估算的键盘高度（Android 键盘通常占 40-50% 屏幕高度）
+            const estimatedKbHeight = kbHeight > 0 ? kbHeight : Math.floor(screen.height * 0.45);
+            // 可视区域底部
+            const visibleBottom = currentVH + viewport.offsetTop;
+            // 输入框被遮挡的高度
             const hiddenHeight = inputRect.bottom - visibleBottom;
-            const kbHeight = _debugInitVH - viewport.height;
 
-            debug(`initH=${_debugInitVH} vvH=${viewport.height.toFixed(0)} kbH=${kbHeight.toFixed(0)} ot=${viewport.offsetTop.toFixed(0)} pt=${viewport.pageTop.toFixed(0)} wiH=${window.innerHeight} iBot=${inputRect.bottom.toFixed(0)} cBot=${contentRect.bottom.toFixed(0)} visBot=${visibleBottom.toFixed(0)} hid=${hiddenHeight.toFixed(0)} sH=${screen.height}`);
+            debug(`initH=${initVH.toFixed(0)} vvH=${currentVH.toFixed(0)} kbH=${kbHeight.toFixed(0)} estKb=${estimatedKbHeight} iBot=${inputRect.bottom.toFixed(0)} visBot=${visibleBottom.toFixed(0)} hid=${hiddenHeight.toFixed(0)} sH=${screen.height}`);
 
-            if (hiddenHeight > -10) {
-                content.style.transform = `translateY(-${Math.max(hiddenHeight, 0) + 20}px)`;
+            // 使用估算的键盘高度来推算上推距离
+            if (hiddenHeight > -10 || kbHeight === 0) {
+                // 如果 visualViewport 没变化，直接用估算的键盘高度上推
+                const pushAmount = kbHeight > 0 ? Math.max(hiddenHeight, 0) + 20 : estimatedKbHeight * 0.6;
+                content.style.transform = `translateY(-${pushAmount}px)`;
             } else {
                 content.style.transform = 'translateY(0)';
             }
@@ -2008,14 +2011,13 @@ function onModalInputFocus(contentId) {
         viewport.addEventListener('scroll', pushUpContent);
         content._kbHandler = pushUpContent;
 
-        debug(`init! initH=${_debugInitVH} sH=${screen.height}`);
-        setTimeout(pushUpContent, 80);
-        setTimeout(pushUpContent, 200);
-        setTimeout(pushUpContent, 400);
-        setTimeout(pushUpContent, 600);
-        setTimeout(pushUpContent, 1000);
+        debug(`init! initH=${initVH.toFixed(0)} sH=${screen.height}`);
+        setTimeout(pushUpContent, 100);
+        setTimeout(pushUpContent, 300);
+        setTimeout(pushUpContent, 500);
+        setTimeout(pushUpContent, 800);
     } else {
-        debug('NO visualViewport!');
+        debug('NO visualViewport! using fallback');
         const initH = window.innerHeight;
         const resizeHandler = () => {
             const kbHeight = initH - window.innerHeight;
@@ -2023,12 +2025,13 @@ function onModalInputFocus(contentId) {
             if (kbHeight > 50) {
                 content.style.transform = `translateY(-${kbHeight * 0.5}px)`;
             } else {
-                content.style.transform = 'translateY(0)';
+                // 估算键盘高度
+                content.style.transform = `translateY(-${screen.height * 0.25}px)`;
             }
         };
         window.addEventListener('resize', resizeHandler);
         content._kbHandler = resizeHandler;
-        resizeHandler();
+        setTimeout(resizeHandler, 300);
     }
 }
 
@@ -2049,8 +2052,6 @@ function resetModalPosition(contentId) {
         }
         content._kbHandler = null;
     }
-    // 重置初始高度记录
-    _debugInitVH = 0;
     // 隐藏调试面板
     const dbg = document.getElementById('kb-debug');
     if (dbg) dbg.style.display = 'none';
