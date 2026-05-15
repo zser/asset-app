@@ -2362,7 +2362,18 @@ function renderCharts() {
     }
 
     let lineLabels, lineData;
-    if (isMonth) {
+    if (isDay) {
+        // 按日：显示选中月每日收益
+        const daysInMonth = new Date(chartYear, chartMonth, 0).getDate();
+        lineLabels = [];
+        lineData = [];
+        for (let d = 1; d <= daysInMonth; d++) {
+            lineLabels.push(d + '日');
+            const dateStr = chartYear + '-' + String(chartMonth).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+            const profit = profitData[dateStr];
+            lineData.push(profit ? (profit.total || 0) : 0);
+        }
+    } else if (isMonth) {
         // 按月：从 profitData 聚合每月收益
         lineLabels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
         lineData = lineLabels.map((_, i) => {
@@ -2435,6 +2446,20 @@ function renderCharts() {
                     ticks: {
                         callback: function(value) {
                             return (value >= 0 ? '+' : '') + value.toLocaleString();
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 0,
+                        callback: function(value, index) {
+                            if (isDay) {
+                                const daysInMonth = lineLabels.length;
+                                if (daysInMonth <= 10) return lineLabels[index];
+                                if (index % Math.ceil(daysInMonth / 10) === 0) return lineLabels[index];
+                                return '';
+                            }
+                            return lineLabels[index];
                         }
                     }
                 }
