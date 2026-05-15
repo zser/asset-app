@@ -1943,7 +1943,8 @@ function closeDepositModalOnBg(e) {
 }
 
 // 通用弹窗键盘遮挡处理
-// 每个弹窗独立存储初始视口高度，避免多个弹窗相互干扰
+// 主方案：scrollIntoView（PWA standalone 模式下最可靠）
+// 增强：visualViewport resize 事件（浏览器模式下更精确）
 
 function recordModalInitVH(contentId) {
     const content = document.getElementById(contentId);
@@ -1955,35 +1956,39 @@ function onModalInputFocus(contentId) {
     const content = document.getElementById(contentId);
     if (!content) return;
 
-    // 确保初始高度已记录，否则用当前视口高度（但可能已被键盘缩小）
     if (!content._initVH || content._initVH < window.innerHeight) {
         content._initVH = window.innerHeight;
     }
 
-    const initVH = content._initVH;
+    // 方案1：scrollIntoView — PWA standalone 下最可靠
+    const activeInput = document.activeElement;
+    if (activeInput && (activeInput.tagName === 'INPUT' || activeInput.tagName === 'TEXTAREA')) {
+        setTimeout(() => {
+            activeInput.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }, 300);
+    }
 
+    // 方案2：visualViewport resize — 浏览器模式下精确计算上推距离
     if (window.visualViewport) {
         const viewport = window.visualViewport;
+        const initVH = content._initVH;
+
         const resizeHandler = () => {
-            // 键盘高度 = 初始高度 - 当前视口高度
             const kbHeight = initVH - viewport.height;
             if (kbHeight > 80) {
-                // 计算弹窗被遮挡的高度
                 const contentRect = content.getBoundingClientRect();
                 const visibleBottom = viewport.offsetTop + viewport.height;
                 const hiddenHeight = contentRect.bottom - visibleBottom;
                 if (hiddenHeight > 0) {
-                    // 遮挡了多少就上推多少 + 缓冲
                     content.style.transform = `translateY(-${hiddenHeight + 20}px)`;
                 } else {
-                    // 没被遮挡但键盘很大，推一部分键盘高度
                     content.style.transform = `translateY(-${kbHeight * 0.4}px)`;
                 }
             } else {
                 content.style.transform = 'translateY(0)';
             }
         };
-        // 移除旧的监听器（如果有）
+
         if (content._kbHandler) {
             viewport.removeEventListener('resize', content._kbHandler);
             viewport.removeEventListener('scroll', content._kbHandler);
@@ -1991,13 +1996,12 @@ function onModalInputFocus(contentId) {
         viewport.addEventListener('resize', resizeHandler);
         viewport.addEventListener('scroll', resizeHandler);
         content._kbHandler = resizeHandler;
-        // 延迟触发，等键盘动画完成
-        setTimeout(resizeHandler, 100);
+        setTimeout(resizeHandler, 300);
     } else {
-        // 不支持 visualViewport 的回退方案
+        // 不支持 visualViewport：仅依赖 scrollIntoView
         const resizeHandler = () => {
             const currentH = window.innerHeight;
-            const kbHeight = initVH - currentH;
+            const kbHeight = content._initVH - currentH;
             if (kbHeight > 80) {
                 content.style.transform = `translateY(-${kbHeight * 0.5}px)`;
             } else {
@@ -2008,7 +2012,7 @@ function onModalInputFocus(contentId) {
             window.removeEventListener('resize', content._kbHandler);
         }
         window.addEventListener('resize', resizeHandler);
-        setTimeout(resizeHandler, 100);
+        setTimeout(resizeHandler, 300);
         content._kbHandler = resizeHandler;
     }
 }
