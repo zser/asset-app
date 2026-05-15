@@ -752,9 +752,9 @@ function loadLocalData() {
         if (saved) {
             const data = JSON.parse(saved);
             if (data.categories) categories = data.categories;
-            if (data.categories) categories = data.categories;
             if (data.assetData) assetData = data.assetData;
             if (data.profitData) profitData = data.profitData;
+            if (data.assetHistory) assetHistory = data.assetHistory;
             if (data.wishes) wishes = data.wishes;
             if (data.wishHistory) wishHistory = data.wishHistory;
         }
@@ -764,7 +764,7 @@ function loadLocalData() {
 function saveLocalData() {
     try {
         localStorage.setItem(LS_DATA, JSON.stringify({
-            categories, assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString()
+            categories, assetData, profitData, assetHistory, wishes, wishHistory, updatedAt: new Date().toISOString()
         }));
     } catch (e) { console.error('saveLocalData error:', e); }
 }
@@ -779,6 +779,7 @@ async function pullFromGitHub(shouldShowToast = false) {
             if (data.categories) categories = data.categories;
             if (data.assetData) assetData = data.assetData;
             if (data.profitData) profitData = data.profitData;
+            if (data.assetHistory) assetHistory = data.assetHistory;
             if (data.wishes) wishes = data.wishes;
             if (data.wishHistory) wishHistory = data.wishHistory;
             localStorage.setItem(LS_SHA, result.sha);
@@ -831,6 +832,21 @@ async function pushToGitHub(shouldShowToast = false) {
 function saveData() {
     saveLocalData();
     if (isConfigured()) pushToGitHub();
+}
+
+// 记录总资产历史（每日快照）
+function recordAssetHistory() {
+    const today = new Date().toISOString().slice(0, 10);
+    const total = categories.reduce((s, cat) =>
+        s + (assetData[cat.key] || []).reduce((ss, item) => ss + item.amount, 0), 0);
+
+    const idx = assetHistory.findIndex(h => h.date === today);
+    if (idx >= 0) {
+        assetHistory[idx].total = total; // 同一天覆盖
+    } else {
+        assetHistory.push({ date: today, total });
+        assetHistory.sort((a, b) => a.date.localeCompare(b.date));
+    }
 }
 
 // 设置页相关
@@ -1030,6 +1046,7 @@ function deleteCategory(key) {
 
     categories = categories.filter(c => c.key !== key);
     delete assetData[key];
+    recordAssetHistory();
     saveData();
     renderCategoryList();
     renderHomeTabs();
@@ -1088,6 +1105,8 @@ let profitData = {
     '2026-05-05': { stock: -300, fund: -200, total: -500 },
     '2026-05-06': { stock: 900, fund: 400, total: 1300 }
 };
+
+let assetHistory = []; // [{ date: 'YYYY-MM-DD', total: Number }] 总资产历史记录
 
 let wishes = [
     {
@@ -1259,6 +1278,7 @@ function getAssetIconHtml(item, category) {
 function deleteHomeItem(cat, idx) {
     const name = assetData[cat][idx].name;
     assetData[cat].splice(idx, 1);
+    recordAssetHistory();
     saveData();
     renderHomeTabContent();
     updateHomeSummary();
@@ -1299,6 +1319,7 @@ function confirmEditItem() {
 
     assetData[editItemCat][editItemIdx].name = name;
     assetData[editItemCat][editItemIdx].amount = amount;
+    recordAssetHistory();
     saveData();
     closeEditItemModal();
     renderHomeTabContent();
@@ -1505,6 +1526,7 @@ function confirmAddItem() {
     const catMeta = categories.find(c => c.key === cat);
     const newItem = { name: name, amount: amount, icon: catMeta ? catMeta.icon : 'fa-wallet', color: catMeta ? catMeta.color : 'blue' };
     assetData[cat].push(newItem);
+    recordAssetHistory();
     saveData();
     closeAddItemModal();
     // 判断来源页面，刷新对应内容
@@ -1728,6 +1750,7 @@ function confirmEditAddItem() {
     const catMeta = categories.find(c => c.key === cat);
     const newItem = { name: name, amount: amount, icon: catMeta ? catMeta.icon : 'fa-wallet', color: catMeta ? catMeta.color : 'blue' };
     assetData[cat].push(newItem);
+    recordAssetHistory();
     saveData();
     closeAddItemModal();
     renderSourceList();
@@ -1740,6 +1763,7 @@ function deleteSourceItem(idx) {
     const items = assetData[editSourceType];
     const name = items[idx].name;
     items.splice(idx, 1);
+    recordAssetHistory();
     saveData();
     if (editSelectedIndex === idx) editSelectedIndex = -1;
     else if (editSelectedIndex > idx) editSelectedIndex--;
@@ -1788,6 +1812,7 @@ function confirmAmount() {
     if (isNaN(amount) || amount === 0) { showToast('请输入金额'); return; }
     if (editSelectedIndex >= 0 && !editIsNewItem) {
         assetData[editSourceType][editSelectedIndex].amount = amount;
+        recordAssetHistory();
         saveData();
         showToast('已更新: ' + assetData[editSourceType][editSelectedIndex].name);
     }
@@ -2278,31 +2303,53 @@ function renderCharts() {
     const isMonth = chartPeriod === 'month';
     const isDay = chartPeriod === 'day';
     const barTitle = document.getElementById('chart-bar-title');
-    barTitle.textContent = isDay ? chartYear + '年' + chartMonth + '月每日收益' : (isMonth ? '总资产走势' : chartYear + '年总资产');
+    barTitle.textContent = isDay ? chartYear + '年' + chartMonth + '月总资产' : (isMonth ? '总资产走势' : chartYear + '年总资产');
 
     let barLabels, barData;
     if (isDay) {
-        // 按日：显示选中月每日收益
+        // 按日：显示选中月每日总资产
         const daysInMonth = new Date(chartYear, chartMonth, 0).getDate();
+        const monthPrefix = chartYear + '-' + String(chartMonth).padStart(2, '0');
         barLabels = [];
         barData = [];
+        // 填充该月每天的记录，无记录的天用前一天的值
+        let lastTotal = 0;
         for (let d = 1; d <= daysInMonth; d++) {
             barLabels.push(d + '日');
-            const dateStr = chartYear + '-' + String(chartMonth).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-            const profit = profitData[dateStr];
-            barData.push(profit ? (profit.total || 0) : 0);
+            const dateStr = monthPrefix + '-' + String(d).padStart(2, '0');
+            const record = assetHistory.find(h => h.date === dateStr);
+            if (record) lastTotal = record.total;
+            barData.push(lastTotal);
         }
     } else if (isMonth) {
-        // 按月：显示选中年每月总资产（无历史数据时，显示当前总资产）
+        // 按月：从 assetHistory 取每月末总资产
         barLabels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
         barData = barLabels.map((_, i) => {
-            if (i + 1 === chartMonth) return totalAsset; // 当前月用真实数据
-            return 0; // 其他月无数据
+            const month = i + 1;
+            const monthPrefix = chartYear + '-' + String(month).padStart(2, '0');
+            // 取该月最后一条记录
+            const monthRecords = assetHistory.filter(h => h.date.startsWith(monthPrefix));
+            if (monthRecords.length > 0) return monthRecords[monthRecords.length - 1].total;
+            return 0;
         });
     } else {
-        // 按年：只显示选中年，无历史数据
-        barLabels = [chartYear + '年'];
-        barData = [totalAsset];
+        // 按年：从 assetHistory 取每年末总资产
+        barLabels = [];
+        barData = [];
+        const years = new Set();
+        assetHistory.forEach(h => years.add(h.date.slice(0, 4)));
+        // 确保选中年也在其中
+        years.add(String(chartYear));
+        const sortedYears = Array.from(years).sort();
+        sortedYears.forEach(y => {
+            barLabels.push(y + '年');
+            const yearRecords = assetHistory.filter(h => h.date.startsWith(y));
+            if (yearRecords.length > 0) {
+                barData.push(yearRecords[yearRecords.length - 1].total);
+            } else {
+                barData.push(0);
+            }
+        });
     }
 
     const barCtx = document.getElementById('chart-bar').getContext('2d');
@@ -2312,9 +2359,9 @@ function renderCharts() {
         data: {
             labels: barLabels,
             datasets: [{
-                label: isDay ? '收益' : '总资产',
+                label: '总资产',
                 data: barData,
-                backgroundColor: isDay ? barData.map(v => v >= 0 ? '#ff4d4f' : '#52c41a') : '#1677ff',
+                backgroundColor: '#1677ff',
                 borderRadius: 4,
                 barPercentage: isDay ? 0.6 : 0.4
             }]
@@ -2327,7 +2374,6 @@ function renderCharts() {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            if (isDay) return value.toLocaleString();
                             return (value / 10000).toFixed(0) + '万';
                         }
                     }
@@ -2895,6 +2941,12 @@ function showToast(msg) {
     loadLocalData();
     loadLastSyncTime();
     loadHideAmountSetting();
+    // 初始化时记录今日总资产快照（如果今天没有记录）
+    const today = new Date().toISOString().slice(0, 10);
+    if (!assetHistory.some(h => h.date === today)) {
+        recordAssetHistory();
+        saveLocalData();
+    }
 
     // 2. 渲染首页
     showPage('page-home');
