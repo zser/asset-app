@@ -22,7 +22,29 @@
       "total": 165
     }
   },
-  "wishes": [],
+  "wishes": [
+    {
+      "name": "122",
+      "current": 0,
+      "target": 111,
+      "date": "2026-05-15",
+      "completeDate": "随缘",
+      "plans": [
+        {
+          "person": "哥哥",
+          "color": "orange",
+          "reward": "",
+          "tasks": []
+        },
+        {
+          "person": "妹妹",
+          "color": "green",
+          "reward": "",
+          "tasks": []
+        }
+      ]
+    }
+  ],
   "wishHistory": [],
-  "updatedAt": "2026-05-15T02:27:26.100Z"
+  "updatedAt": "2026-05-15T02:27:54.187Z"
 }
