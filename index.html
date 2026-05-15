@@ -67,6 +67,12 @@
         .swipe-wrapper { overflow: hidden; position: relative; border-radius: var(--ant-radius); margin-bottom: 8px; }
         .swipe-content { position: relative; z-index: 2; transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1); background: white; }
         .swipe-delete { position: absolute; right: 0; top: 0; bottom: 0; width: 70px; background: var(--ant-red); color: white; display: flex; align-items: center; justify-content: center; z-index: 1; border-radius: 0 var(--ant-radius) var(--ant-radius) 0; font-size: 13px; cursor: pointer; }
+        /* 拖拽排序 */
+        .swipe-wrapper { transition: transform 0.15s ease, opacity 0.15s ease; }
+        .swipe-wrapper.dragging { opacity: 0.6; transform: scale(1.03); box-shadow: 0 12px 28px rgba(0,0,0,0.2); z-index: 100; }
+        .swipe-wrapper.drag-over { transform: translateY(8px); }
+        .swipe-wrapper.drag-over::before { content: ''; position: absolute; top: -4px; left: 0; right: 0; height: 2px; background: var(--ant-primary); border-radius: 1px; }
+        .swipe-wrapper.dragging .swipe-content { box-shadow: 0 4px 16px rgba(22,119,255,0.3); }
         /* Ant Design 输入框 */
         .ant-input { width: 100%; border: 1px solid var(--ant-border); border-radius: var(--ant-radius-sm); padding: 4px 11px; font-size: 14px; color: var(--ant-text); transition: border-color 0.2s, box-shadow 0.2s; outline: none; line-height: 1.5714; }
         .ant-input:hover { border-color: var(--ant-border-hover); }
@@ -107,6 +113,7 @@
             <div class="flex justify-between items-center mb-1">
                 <span class="text-sm" style="color:rgba(255,255,255,0.85)">总资产（元）</span>
                 <div class="flex items-center gap-2">
+                    <button onclick="toggleHideAmount()" class="hover:text-white" style="color:rgba(255,255,255,0.65)"><i id="eye-icon" class="fas fa-eye text-xs"></i></button>
                     <button onclick="showPage('page-settings')" class="hover:text-white" style="color:rgba(255,255,255,0.65)"><i class="fas fa-cog text-xs"></i></button>
                     <button onclick="openEditSource()" class="text-xs px-3 py-1 rounded-full" style="background:rgba(255,255,255,0.2);color:#fff">编辑</button>
                 </div>
@@ -114,7 +121,7 @@
             <div class="text-3xl font-bold mb-3" id="total-asset">0.00</div>
             <div class="flex items-center gap-2" style="color:rgba(255,255,255,0.65)">
                 <button onclick="refreshData(this)" class="hover:text-white"><i class="fas fa-sync-alt text-xs"></i></button>
-                <p class="text-xs" id="last-update-time">最后更新：2026-05-07 10:15</p>
+                <p class="text-xs" id="last-update-time">最后更新：-</p>
                 <span class="ml-auto text-[10px] flex items-center gap-1" id="home-sync-status" style="color:rgba(255,255,255,0.45)"><span class="w-1.5 h-1.5 rounded-full inline-block" style="background:rgba(255,255,255,0.4)"></span>未配置</span>
             </div>
             <!-- 分类占比 -->
@@ -637,7 +644,7 @@ function saveLocalData() {
     } catch (e) { console.error('saveLocalData error:', e); }
 }
 
-async function pullFromGitHub(showToast = false) {
+async function pullFromGitHub(shouldShowToast = false) {
     if (!isConfigured()) { updateSyncStatus('unconfigured'); return; }
     try {
         updateSyncStatus('syncing');
@@ -650,19 +657,18 @@ async function pullFromGitHub(showToast = false) {
             if (data.wishHistory) wishHistory = data.wishHistory;
             localStorage.setItem(LS_SHA, result.sha);
             saveLocalData();
-            // 刷新当前页面数据（不触发 showPage，避免循环调用）
             refreshCurrentPage();
         }
         updateSyncStatus('synced');
-        document.getElementById('sync-last-time').textContent = '最后同步：' + new Date().toLocaleString('zh-CN');
-        if (showToast) showToast('拉取成功');
+        updateLastSyncTime();
+        if (shouldShowToast) showToast('拉取成功');
     } catch (e) {
         updateSyncStatus('error');
-        if (showToast) showToast('拉取失败: ' + e.message);
+        if (shouldShowToast) showToast('拉取失败: ' + e.message);
     }
 }
 
-async function pushToGitHub(showToast = false) {
+async function pushToGitHub(shouldShowToast = false) {
     if (!isConfigured()) { updateSyncStatus('unconfigured'); return; }
     if (isSyncing) return;
     isSyncing = true;
@@ -672,10 +678,9 @@ async function pushToGitHub(showToast = false) {
         const result = await saveToGitHub({ assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString() }, sha);
         localStorage.setItem(LS_SHA, result.content.sha);
         updateSyncStatus('synced');
-        document.getElementById('sync-last-time').textContent = '最后同步：' + new Date().toLocaleString('zh-CN');
-        if (showToast) showToast('推送成功');
+        updateLastSyncTime();
+        if (shouldShowToast) showToast('推送成功');
     } catch (e) {
-        // 409 冲突：重新拉取后再推
         if (e.message && e.message.includes('SHA')) {
             try {
                 const fresh = await fetchFromGitHub();
@@ -684,13 +689,14 @@ async function pushToGitHub(showToast = false) {
                     const result = await saveToGitHub({ assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString() }, fresh.sha);
                     localStorage.setItem(LS_SHA, result.content.sha);
                     updateSyncStatus('synced');
-                    if (showToast) showToast('推送成功');
+                    updateLastSyncTime();
+                    if (shouldShowToast) showToast('推送成功');
                     return;
                 }
             } catch (e2) { e = e2; }
         }
         updateSyncStatus('error');
-        if (showToast) showToast('推送失败: ' + e.message);
+        if (shouldShowToast) showToast('推送失败: ' + e.message);
     } finally {
         isSyncing = false;
     }
@@ -887,7 +893,12 @@ function updateHomeSummary() {
         catTotals[cat] = assetData[cat].reduce((s, i) => s + i.amount, 0);
         total += catTotals[cat];
     });
-    document.getElementById('total-asset').textContent = total.toLocaleString('zh-CN', { minimumFractionDigits: 2 });
+    const totalEl = document.getElementById('total-asset');
+    if (isAmountHidden) {
+        totalEl.textContent = '****';
+    } else {
+        totalEl.textContent = total.toLocaleString('zh-CN', { minimumFractionDigits: 2 });
+    }
     const cats = ['stock', 'fund', 'current', 'deposit'];
     const labels = { stock: 'home-stock', fund: 'home-fund', current: 'home-current', deposit: 'home-deposit' };
     cats.forEach(cat => {
@@ -926,17 +937,16 @@ function renderHomeTabContent() {
     items.forEach((item, idx) => {
         const pct = catTotal > 0 ? ((item.amount / catTotal) * 100).toFixed(1) : '0.0';
         let iconHtml = getAssetIconHtml(item, currentHomeTab);
-        html += `<div class="swipe-wrapper" data-cat="${currentHomeTab}" data-idx="${idx}">
+        html += `<div class="swipe-wrapper" data-cat="${currentHomeTab}" data-idx="${idx}" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragend="onDragEnd(event)">
             <div class="swipe-delete" onclick="deleteHomeItem('${currentHomeTab}', ${idx})"><i class="fas fa-trash mr-1"></i>删除</div>
-            <div class="swipe-content ant-card p-3 flex items-center gap-3" ontouchstart="onSwipeStart(event)" ontouchmove="onSwipeMove(event)" ontouchend="onSwipeEnd(event)">
+            <div class="swipe-content ant-card p-3 flex items-center gap-3" ontouchstart="onItemTouchStart(event, '${currentHomeTab}', ${idx})" ontouchmove="onItemTouchMove(event)" ontouchend="onItemTouchEnd(event)" onclick="editHomeItem('${currentHomeTab}', ${idx})">
+                <i class="fas fa-grip-vertical" style="color:var(--ant-text-quaternary);font-size:14px;cursor:grab"></i>
                 ${iconHtml}
                 <div class="flex-1">
                     <div class="font-medium text-sm" style="color:var(--ant-text)">${item.name}</div>
                     <div class="text-xs" style="color:var(--ant-text-tertiary)">${pct}%</div>
                 </div>
-                <div class="text-right">
-                    <div class="font-semibold text-sm" style="color:var(--ant-text)">${item.amount.toLocaleString()}</div>
-                </div>
+                <div class="font-semibold text-sm" style="color:var(--ant-text)">${item.amount.toLocaleString()}</div>
             </div>
         </div>`;
     });
@@ -971,6 +981,129 @@ function deleteHomeItem(cat, idx) {
     renderHomeTabContent();
     updateHomeSummary();
     showToast('已删除「' + name + '」');
+}
+
+function editHomeItem(cat, idx) {
+    // 如果有滑动操作，不触发点击
+    if (isOpen) return;
+    editSourceType = cat;
+    editSelectedIndex = idx;
+    editIsNewItem = false;
+    const item = assetData[cat][idx];
+    document.getElementById('amount-source-label').textContent = item.name;
+    currentAmount = '0';
+    document.getElementById('amount-display').textContent = currentAmount;
+    showPage('page-edit-amount');
+}
+
+// ============ 拖拽排序 ============
+let dragSrcIdx = -1;
+let dragSrcCat = '';
+let touchStartY = 0;
+let touchStartX = 0;
+let longPressTimer = null;
+let isDragMode = false;
+let dragOverEl = null;
+
+function onDragStart(e) {
+    const wrapper = e.target.closest('.swipe-wrapper');
+    dragSrcIdx = parseInt(wrapper.dataset.idx);
+    dragSrcCat = wrapper.dataset.cat;
+    wrapper.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function onDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const wrapper = e.target.closest('.swipe-wrapper');
+    if (wrapper && parseInt(wrapper.dataset.idx) !== dragSrcIdx) {
+        wrapper.classList.add('drag-over');
+    }
+}
+
+function onDrop(e) {
+    e.preventDefault();
+    const wrapper = e.target.closest('.swipe-wrapper');
+    if (!wrapper) return;
+    const targetIdx = parseInt(wrapper.dataset.idx);
+    if (targetIdx === dragSrcIdx || wrapper.dataset.cat !== dragSrcCat) return;
+    // 交换位置
+    const list = assetData[dragSrcCat];
+    const [removed] = list.splice(dragSrcIdx, 1);
+    list.splice(targetIdx, 0, removed);
+    saveData();
+    renderHomeTabContent();
+}
+
+function onDragEnd(e) {
+    document.querySelectorAll('.swipe-wrapper').forEach(el => {
+        el.classList.remove('dragging', 'drag-over');
+    });
+    dragSrcIdx = -1;
+}
+
+function onItemTouchStart(e, cat, idx) {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    longPressTimer = setTimeout(() => {
+        isDragMode = true;
+        dragSrcIdx = idx;
+        dragSrcCat = cat;
+        e.currentTarget.closest('.swipe-wrapper').classList.add('dragging');
+        showToast('拖拽中...');
+    }, 500);
+}
+
+function onItemTouchMove(e) {
+    if (!isDragMode) {
+        // 如果横向移动，取消长按
+        const dx = Math.abs(e.touches[0].clientX - touchStartX);
+        const dy = Math.abs(e.touches[0].clientY - touchStartY);
+        if (dx > dy && dx > 10) {
+            clearTimeout(longPressTimer);
+        }
+        return;
+    }
+    e.preventDefault();
+    const touch = e.touches[0];
+    const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+    const wrapper = elements.find(el => el.classList && el.classList.contains('swipe-wrapper'));
+    if (wrapper && parseInt(wrapper.dataset.idx) !== dragSrcIdx && wrapper.dataset.cat === dragSrcCat) {
+        if (dragOverEl !== wrapper) {
+            if (dragOverEl) dragOverEl.classList.remove('drag-over');
+            wrapper.classList.add('drag-over');
+            dragOverEl = wrapper;
+        }
+    } else if (dragOverEl) {
+        dragOverEl.classList.remove('drag-over');
+        dragOverEl = null;
+    }
+}
+
+function onItemTouchEnd(e) {
+    clearTimeout(longPressTimer);
+    if (!isDragMode) {
+        // 正常的滑动删除流程
+        return;
+    }
+    e.preventDefault();
+    document.querySelectorAll('.swipe-wrapper').forEach(el => {
+        el.classList.remove('dragging', 'drag-over');
+    });
+    if (dragOverEl && dragSrcIdx >= 0) {
+        const targetIdx = parseInt(dragOverEl.dataset.idx);
+        if (targetIdx !== dragSrcIdx) {
+            const list = assetData[dragSrcCat];
+            const [removed] = list.splice(dragSrcIdx, 1);
+            list.splice(targetIdx, 0, removed);
+            saveData();
+            renderHomeTabContent();
+        }
+    }
+    isDragMode = false;
+    dragSrcIdx = -1;
+    dragOverEl = null;
 }
 
 // ============ 添加数据源弹窗 ============
@@ -1071,10 +1204,53 @@ function refreshData(btn) {
     const icon = btn.querySelector('i');
     icon.classList.add('spin-animation');
     setTimeout(() => icon.classList.remove('spin-animation'), 800);
+    pullFromGitHub(true);
+}
+
+function updateLastSyncTime() {
     const now = new Date();
     const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
     document.getElementById('last-update-time').textContent = '最后更新：' + timeStr;
-    showToast('已刷新');
+    localStorage.setItem('last-sync-time', timeStr);
+}
+
+function loadLastSyncTime() {
+    const saved = localStorage.getItem('last-sync-time');
+    if (saved) {
+        document.getElementById('last-update-time').textContent = '最后更新：' + saved;
+    }
+}
+
+let isAmountHidden = false;
+
+function toggleHideAmount() {
+    isAmountHidden = !isAmountHidden;
+    const totalEl = document.getElementById('total-asset');
+    const eyeIcon = document.getElementById('eye-icon');
+    if (isAmountHidden) {
+        totalEl.textContent = '****';
+        eyeIcon.className = 'fas fa-eye-slash text-xs';
+    } else {
+        totalEl.textContent = calculateTotal().toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        eyeIcon.className = 'fas fa-eye text-xs';
+    }
+    localStorage.setItem('hide-amount', isAmountHidden);
+}
+
+function loadHideAmountSetting() {
+    const saved = localStorage.getItem('hide-amount');
+    if (saved === 'true') {
+        isAmountHidden = true;
+        document.getElementById('eye-icon').className = 'fas fa-eye-slash text-xs';
+    }
+}
+
+function calculateTotal() {
+    let total = 0;
+    Object.keys(assetData).forEach(cat => {
+        total += assetData[cat].reduce((s, i) => s + i.amount, 0);
+    });
+    return total;
 }
 
 // ============ 编辑功能 ============
@@ -1917,6 +2093,8 @@ function showToast(msg) {
 (async function init() {
     // 1. 先加载本地缓存（快速渲染）
     loadLocalData();
+    loadLastSyncTime();
+    loadHideAmountSetting();
 
     // 2. 渲染首页
     showPage('page-home');
