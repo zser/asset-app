@@ -5,8 +5,46 @@
     "current": [],
     "deposit": []
   },
-  "profitData": {},
-  "wishes": [],
+  "profitData": {
+    "2026-05-20": {
+      "stock": 12223,
+      "fund": 55563,
+      "total": 67786
+    },
+    "2026-05-14": {
+      "stock": 12,
+      "fund": 34,
+      "total": 46
+    },
+    "2026-05-15": {
+      "stock": 77,
+      "fund": 88,
+      "total": 165
+    }
+  },
+  "wishes": [
+    {
+      "name": "122",
+      "current": 22233,
+      "target": 111,
+      "date": "2026-05-15",
+      "completeDate": "随缘",
+      "plans": [
+        {
+          "person": "哥哥",
+          "color": "orange",
+          "reward": "",
+          "tasks": []
+        },
+        {
+          "person": "妹妹",
+          "color": "green",
+          "reward": "",
+          "tasks": []
+        }
+      ]
+    }
+  ],
   "wishHistory": [],
-  "updatedAt": "2026-05-14T10:28:12.922Z"
+  "updatedAt": "2026-05-15T02:28:00.604Z"
 }

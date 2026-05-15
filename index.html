@@ -61,6 +61,31 @@
         .spin-animation { animation: spin 0.8s ease; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .task-done { text-decoration: line-through; color: var(--ant-text-quaternary); }
+
+        /* 撒花动效 */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: confetti-fall 3s ease-out forwards;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(400px) rotate(720deg); opacity: 0; }
+        }
+
+        /* 日期选择器样式 */
+        .date-picker-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10001; }
+        .date-picker-popup { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; z-index: 10002; border-radius: 16px 16px 0 0; animation: picker-slide-up 0.3s ease; }
+        @keyframes picker-slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .date-picker-header { display: flex; justify-content: space-between; padding: 16px; border-bottom: 1px solid rgba(0,0,0,0.06); }
+        .date-picker-body { display: flex; height: 220px; overflow: hidden; position: relative; }
+        .date-picker-body::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 40px; transform: translateY(-50%); background: rgba(0,0,0,0.04); border-radius: 8px; pointer-events: none; }
+        .date-picker-column { flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .date-picker-column::-webkit-scrollbar { display: none; }
+        .date-picker-item { height: 44px; display: flex; align-items: center; justify-content: center; font-size: 16px; scroll-snap-align: center; color: var(--ant-text-tertiary); }
+        .date-picker-item.selected { color: var(--ant-text); font-weight: 600; }
+        .date-picker-column { padding: 88px 0; }
         .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.75); color: white; padding: 8px 24px; border-radius: var(--ant-radius-sm); z-index: 9999; font-size: 14px; animation: toastIn 0.2s ease; }
         @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
         /* 左滑删除 */
@@ -384,8 +409,7 @@
                 <div class="mb-4">
                     <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">添加日期</label>
                     <div class="relative">
-                        <input id="new-wish-date" type="text" class="ant-input pr-9" readonly placeholder="请选择日期" onclick="this.nextElementSibling.showPicker?.() || this.nextElementSibling.click()">
-                        <input type="date" class="absolute right-0 top-0 w-full h-full opacity-0" onchange="document.getElementById('new-wish-date').value=this.value" style="pointer-events:none">
+                        <input id="new-wish-date" type="text" class="ant-input pr-9" readonly placeholder="请选择日期" onclick="openDatePicker('new-wish-date')">
                         <i class="fas fa-calendar-alt absolute right-3 top-1/2 -translate-y-1/2" style="color:var(--ant-text-tertiary);pointer-events:none"></i>
                     </div>
                 </div>
@@ -393,8 +417,7 @@
                     <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">完成日期</label>
                     <div class="flex gap-2 items-center">
                         <div class="relative flex-1">
-                            <input id="new-wish-complete-date" type="text" class="ant-input pr-9" readonly placeholder="请选择日期" onclick="if(!this.disabled){this.nextElementSibling.showPicker?.() || this.nextElementSibling.click()}">
-                            <input type="date" class="absolute right-0 top-0 w-full h-full opacity-0" onchange="document.getElementById('new-wish-complete-date').value=this.value" style="pointer-events:none">
+                            <input id="new-wish-complete-date" type="text" class="ant-input pr-9" readonly placeholder="请选择日期" onclick="if(!this.disabled){openDatePicker('new-wish-complete-date')}">
                             <i class="fas fa-calendar-alt absolute right-3 top-1/2 -translate-y-1/2" style="color:var(--ant-text-tertiary);pointer-events:none"></i>
                         </div>
                         <button id="btn-random-date" onclick="toggleRandomDate()" class="ant-btn-default text-sm px-3 py-2">随缘</button>
@@ -547,6 +570,70 @@
                 <button onclick="addDepositQuick(2000)" class="flex-1 py-2 rounded-lg text-sm" style="background:var(--ant-bg)">+2000</button>
             </div>
             <button onclick="saveDeposit()" class="w-full ant-btn-primary py-2 rounded-lg font-medium">确认存入</button>
+        </div>
+    </div>
+
+    <!-- 历史心愿详情弹窗 -->
+    <div id="wish-history-modal" class="fixed inset-0 z-50 items-center justify-center" style="display:none!important;background:rgba(0,0,0,0.45)" onclick="if(event.target===event.currentTarget)closeWishHistoryModal()">
+        <div class="bg-white rounded-lg w-80 max-w-md p-5">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-semibold text-base" style="color:var(--ant-text)" id="wish-history-title">心愿详情</h3>
+                <button onclick="closeWishHistoryModal()" style="color:var(--ant-text-tertiary)"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="wish-history-content" class="text-sm" style="color:var(--ant-text-secondary)"></div>
+        </div>
+    </div>
+
+    <!-- 心愿达成庆祝弹窗 -->
+    <div id="wish-complete-modal" class="fixed inset-0 z-[10000] items-center justify-center" style="display:none!important;background:rgba(0,0,0,0.6)">
+        <div class="bg-white rounded-2xl w-80 p-6 text-center relative overflow-hidden">
+            <div id="confetti-container" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+            <div class="relative z-10">
+                <div class="text-6xl mb-3">🎉</div>
+                <h3 class="text-xl font-bold mb-2" style="color:var(--ant-text)">心愿达成！</h3>
+                <p id="wish-complete-name" class="text-sm mb-4" style="color:var(--ant-text-secondary)"></p>
+                <div id="wish-complete-rewards" class="text-left mb-4 p-3 rounded-lg" style="background:#fffbe6"></div>
+                <button onclick="closeWishCompleteModal()" class="w-full ant-btn-primary py-2 rounded-lg font-medium">太棒了！</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加计划弹窗 -->
+    <div id="add-plan-modal" class="fixed inset-0 z-50 items-end justify-center" style="display:none!important;background:rgba(0,0,0,0.45)" onclick="if(event.target===event.currentTarget)closeAddPlanModal()">
+        <div id="add-plan-modal-content" class="bg-white rounded-t-lg w-full max-w-md p-5 transition-transform duration-300">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-semibold text-base" style="color:var(--ant-text)">添加计划</h3>
+                <button onclick="closeAddPlanModal()" style="color:var(--ant-text-tertiary)"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="mb-4">
+                <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">参与人</label>
+                <div class="flex gap-2">
+                    <button id="plan-person-brother" onclick="selectPlanPerson('哥哥')" class="flex-1 py-2 rounded-lg text-sm font-medium" style="background:rgba(250,140,22,0.1);color:#fa8c16;border:2px solid #fa8c16">哥哥</button>
+                    <button id="plan-person-sister" onclick="selectPlanPerson('妹妹')" class="flex-1 py-2 rounded-lg text-sm font-medium" style="background:var(--ant-bg);color:var(--ant-text-tertiary);border:2px solid var(--ant-border)">妹妹</button>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">达成后心愿</label>
+                <input id="plan-reward-input" type="text" class="ant-input" placeholder="例：买一个新玩具" onfocus="onModalInputFocus('add-plan-modal-content')" onblur="onModalInputBlur('add-plan-modal-content')">
+            </div>
+            <button onclick="confirmAddPlan()" class="w-full ant-btn-primary py-2 rounded-lg font-medium">确定</button>
+        </div>
+    </div>
+
+    <!-- 日期选择器弹窗 -->
+    <div id="date-picker-modal" style="display:none">
+        <div class="date-picker-mask" onclick="closeDatePicker()"></div>
+        <div class="date-picker-popup">
+            <div class="date-picker-header">
+                <button onclick="closeDatePicker()" style="color:var(--ant-text-tertiary)">取消</button>
+                <span id="date-picker-title" style="color:var(--ant-text);font-weight:500">选择日期</span>
+                <button onclick="confirmDatePicker()" style="color:var(--ant-primary);font-weight:500">确定</button>
+            </div>
+            <div class="date-picker-body">
+                <div id="picker-year" class="date-picker-column"></div>
+                <div id="picker-month" class="date-picker-column"></div>
+                <div id="picker-day" class="date-picker-column"></div>
+            </div>
         </div>
     </div>
 
@@ -1743,12 +1830,32 @@ function saveDeposit() {
     const amount = parseFloat(document.getElementById('deposit-amount').value);
     if (isNaN(amount) || amount <= 0) { showToast('请输入金额'); return; }
     const idx = depositWishIndex;
-    wishes[idx].current += amount;
+    const w = wishes[idx];
+    const oldCurrent = w.current;
+    w.current += amount;
     saveData();
     closeDepositModal();
-    // 直接重新渲染详情页，不触发 showPage/pullFromGitHub
-    renderWishDetailContent(idx);
-    showToast('已存入 ' + amount.toLocaleString());
+
+    // 判断是否达成
+    if (w.current >= w.target) {
+        // 自动转入历史心愿
+        wishHistory.push({
+            name: w.name,
+            target: w.target,
+            current: w.current,
+            date: w.date,
+            completeDate: w.completeDate,
+            plans: w.plans,
+            completedDate: new Date().toISOString().slice(0, 10)
+        });
+        wishes.splice(idx, 1);
+        saveData();
+        // 弹出庆祝弹窗 + 撒花
+        showWishCompleteModal(w);
+    } else {
+        renderWishDetailContent(idx);
+        showToast('已存入 ' + amount.toLocaleString());
+    }
 }
 
 function renderWishDetailContent(idx) {
@@ -1757,6 +1864,7 @@ function renderWishDetailContent(idx) {
     document.getElementById('wish-detail-title').textContent = w.name;
     const pct = Math.min(100, (w.current / w.target * 100)).toFixed(1);
     const remaining = Math.max(0, w.target - w.current);
+    const isCompleted = w.current >= w.target;
     let html = `<div class="mb-4">
         <div class="flex justify-between text-sm mb-1">
             <span style="color:var(--ant-text-secondary)">进度</span><span style="color:var(--ant-text)">${pct}%</span>
@@ -1767,11 +1875,31 @@ function renderWishDetailContent(idx) {
         <div class="flex justify-between text-xs mt-1" style="color:var(--ant-text-tertiary)">
             <span>已存 ${w.current.toLocaleString()}</span>
             <span>目标 ${w.target.toLocaleString()}</span>
-        </div>
-        <button onclick="openDepositModal(${idx})" class="w-full mt-3 py-2 rounded-lg text-sm font-medium" style="background:var(--ant-primary-bg);color:var(--ant-primary);border:1px solid var(--ant-primary-border)">
-            <i class="fas fa-plus mr-1"></i>存入${remaining > 0 ? '（还差 ' + remaining.toLocaleString() + '）' : '（已达成）'}
-        </button>
-    </div>`;
+        </div>`;
+    if (!isCompleted) {
+        html += `<button onclick="openDepositModal(${idx})" class="w-full mt-3 py-2 rounded-lg text-sm font-medium" style="background:var(--ant-primary-bg);color:var(--ant-primary);border:1px solid var(--ant-primary-border)">
+            <i class="fas fa-plus mr-1"></i>存入（还差 ${remaining.toLocaleString()}）
+        </button>`;
+    } else {
+        html += `<button onclick="openDepositModal(${idx})" class="w-full mt-3 py-2 rounded-lg text-sm font-medium" style="background:var(--ant-primary-bg);color:var(--ant-primary);border:1px solid var(--ant-primary-border)">
+            <i class="fas fa-plus mr-1"></i>继续存入
+        </button>`;
+    }
+    html += `</div>`;
+    // 达成后心愿区域
+    const rewards = w.plans.filter(p => p.reward).map(p => ({ person: p.person, color: p.color, reward: p.reward }));
+    if (rewards.length > 0) {
+        html += `<div class="rounded-lg p-3 mb-3" style="background:linear-gradient(135deg,#fffbe6,#fff7cc);border:1px solid rgba(250,173,20,0.2)">
+            <div class="text-xs font-medium mb-2" style="color:#d48806"><i class="fas fa-gift mr-1"></i>达成后心愿</div>`;
+        rewards.forEach(r => {
+            const tagColor = r.color === 'orange' ? '#fa8c16' : '#52c41a';
+            html += `<div class="flex items-start gap-2 mb-1">
+                <span class="text-xs px-1.5 py-0.5 rounded" style="background:${tagColor}15;color:${tagColor};white-space:nowrap">${r.person}</span>
+                <span class="text-sm" style="color:var(--ant-text-secondary)">${r.reward}</span>
+            </div>`;
+        });
+        html += `</div>`;
+    }
     w.plans.forEach((plan, pi) => {
         const planColor = plan.color === 'orange' ? 'border-color:rgba(250,140,22,0.3);background:rgba(250,140,22,0.04)' : 'border-color:rgba(82,196,26,0.3);background:rgba(82,196,26,0.04)';
         html += `<div class="border rounded-lg p-3 mb-3" style="${planColor}">
@@ -1779,6 +1907,13 @@ function renderWishDetailContent(idx) {
                 <span class="font-medium text-sm" style="color:var(--ant-text)">${plan.person}</span>
                 <button onclick="deleteWishPlan(${idx}, ${pi})" class="text-xs" style="color:var(--ant-text-quaternary)"><i class="fas fa-trash"></i></button>
             </div>`;
+        // 达成后心愿（单人卡片内也显示）
+        if (plan.reward) {
+            const tagColor = plan.color === 'orange' ? '#fa8c16' : '#52c41a';
+            html += `<div class="rounded p-2 mb-2 text-xs" style="background:rgba(250,173,20,0.08);color:#d48806">
+                <i class="fas fa-gift mr-1"></i>${plan.reward}
+            </div>`;
+        }
         plan.tasks.forEach((task, ti) => {
             const doneClass = task.done ? 'task-done' : '';
             const checkColor = task.done ? 'color:var(--ant-green)' : 'color:var(--ant-text-quaternary)';
@@ -1792,7 +1927,7 @@ function renderWishDetailContent(idx) {
             <button onclick="addWishTask(${idx},${pi})" class="text-lg" style="color:var(--ant-primary)"><i class="fas fa-plus"></i></button>
         </div></div>`;
     });
-    html += `<button onclick="showPage('page-add-wish')" class="w-full py-2 border-2 border-dashed rounded-lg text-sm mt-1" style="border-color:rgba(0,0,0,0.15);color:var(--ant-text-tertiary)">
+    html += `<button onclick="openAddPlanModal(${idx})" class="w-full py-2 border-2 border-dashed rounded-lg text-sm mt-1" style="border-color:rgba(0,0,0,0.15);color:var(--ant-text-tertiary)">
         <i class="fas fa-plus mr-1"></i>添加计划
     </button>`;
     document.getElementById('wish-detail-content').innerHTML = html;
@@ -2067,11 +2202,13 @@ function renderWishList() {
     const history = document.getElementById('wish-history');
     let hHtml = '';
     wishHistory.forEach((w, idx) => {
-        hHtml += `<div class="rounded-lg p-3 mb-2 cursor-pointer" style="background:rgba(0,0,0,0.02)" onclick="showToast('${w.name} - 已于${w.completedDate}完成')">
+        const rewards = (w.plans || []).filter(p => p.reward).map(p => `${p.person}：${p.reward}`).join('；');
+        hHtml += `<div class="rounded-lg p-3 mb-2 cursor-pointer" style="background:rgba(0,0,0,0.02)" onclick="showWishHistoryDetail(${idx})">
             <div class="flex justify-between items-center">
-                <span class="text-sm line-through" style="color:var(--ant-text-quaternary)">${w.name}</span>
+                <span class="text-sm" style="color:var(--ant-text-secondary)">${w.name}</span>
                 <span class="text-xs" style="color:var(--ant-text-quaternary)">${w.completedDate}</span>
             </div>
+            <div class="text-xs mt-1" style="color:var(--ant-text-quaternary)">目标 ${w.target.toLocaleString()}${rewards ? ' · ' + rewards : ''}</div>
         </div>`;
     });
     history.innerHTML = hHtml;
@@ -2131,16 +2268,144 @@ function deleteWishPlan(wi, pi) {
     showToast('已删除计划');
 }
 
-function addWishPlan(wi) {
-    const person = prompt('参与人（哥哥/妹妹）');
-    if (!person || !person.trim()) return;
-    const color = person.trim() === '哥哥' ? 'orange' : 'green';
-    wishes[wi].plans.push({ person: person.trim(), color: color, tasks: [] });
+// 添加计划弹窗
+let addPlanWishIndex = -1;
+let selectedPlanPerson = '哥哥';
+
+function openAddPlanModal(wi) {
+    addPlanWishIndex = wi;
+    selectedPlanPerson = '哥哥';
+    document.getElementById('plan-person-brother').style.cssText = 'background:rgba(250,140,22,0.1);color:#fa8c16;border:2px solid #fa8c16';
+    document.getElementById('plan-person-sister').style.cssText = 'background:var(--ant-bg);color:var(--ant-text-tertiary);border:2px solid var(--ant-border)';
+    document.getElementById('plan-reward-input').value = '';
+    var modal = document.getElementById('add-plan-modal');
+    modal.classList.add('modal-show');
+    modal.style.cssText = 'display:flex!important;position:fixed;inset:0;z-index:9999;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.45)';
+}
+
+function closeAddPlanModal() {
+    var modal = document.getElementById('add-plan-modal');
+    modal.classList.remove('modal-show');
+    modal.style.cssText = 'display:none!important';
+    resetModalPosition('add-plan-modal-content');
+}
+
+function selectPlanPerson(person) {
+    selectedPlanPerson = person;
+    if (person === '哥哥') {
+        document.getElementById('plan-person-brother').style.cssText = 'background:rgba(250,140,22,0.1);color:#fa8c16;border:2px solid #fa8c16';
+        document.getElementById('plan-person-sister').style.cssText = 'background:var(--ant-bg);color:var(--ant-text-tertiary);border:2px solid var(--ant-border)';
+    } else {
+        document.getElementById('plan-person-sister').style.cssText = 'background:rgba(82,196,26,0.1);color:#52c41a;border:2px solid #52c41a';
+        document.getElementById('plan-person-brother').style.cssText = 'background:var(--ant-bg);color:var(--ant-text-tertiary);border:2px solid var(--ant-border)';
+    }
+}
+
+function confirmAddPlan() {
+    if (addPlanWishIndex < 0) return;
+    const reward = document.getElementById('plan-reward-input').value.trim();
+    const color = selectedPlanPerson === '哥哥' ? 'orange' : 'green';
+    wishes[addPlanWishIndex].plans.push({ person: selectedPlanPerson, color: color, reward: reward, tasks: [] });
     saveData();
-    renderWishDetailContent(wi);
+    renderWishDetailContent(addPlanWishIndex);
+    closeAddPlanModal();
+    showToast('已添加计划');
+}
+
+// 心愿达成庆祝弹窗
+function showWishCompleteModal(w) {
+    document.getElementById('wish-complete-name').textContent = `「${w.name}」目标 ${w.target.toLocaleString()}，实际存入 ${w.current.toLocaleString()}`;
+    const rewards = (w.plans || []).filter(p => p.reward);
+    let rewardHtml = '';
+    if (rewards.length > 0) {
+        rewardHtml = '<div class="text-xs font-medium mb-2" style="color:#d48806">🎁 达成后心愿</div>';
+        rewards.forEach(r => {
+            const tagColor = r.color === 'orange' ? '#fa8c16' : '#52c41a';
+            rewardHtml += `<div class="flex items-start gap-2 mb-1">
+                <span class="text-xs px-1.5 py-0.5 rounded" style="background:${tagColor}15;color:${tagColor}">${r.person}</span>
+                <span class="text-sm" style="color:var(--ant-text-secondary)">${r.reward}</span>
+            </div>`;
+        });
+    }
+    document.getElementById('wish-complete-rewards').innerHTML = rewardHtml;
+
+    var modal = document.getElementById('wish-complete-modal');
+    modal.classList.add('modal-show');
+    modal.style.cssText = 'display:flex!important;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center;background:rgba(0,0,0,0.6)';
+
+    // 撒花动效
+    startConfetti();
+}
+
+function startConfetti() {
+    const container = document.getElementById('confetti-container');
+    container.innerHTML = '';
+    const colors = ['#fa8c16', '#52c41a', '#1677ff', '#f5222d', '#722ed1', '#eb2f96'];
+    for (let i = 0; i < 50; i++) {
+        setTimeout(() => {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+            confetti.style.width = (Math.random() * 8 + 6) + 'px';
+            confetti.style.height = confetti.style.width;
+            confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            container.appendChild(confetti);
+        }, i * 30);
+    }
+}
+
+function closeWishCompleteModal() {
+    var modal = document.getElementById('wish-complete-modal');
+    modal.classList.remove('modal-show');
+    modal.style.cssText = 'display:none!important';
+    // 返回心愿列表
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-wish').classList.add('active');
+    document.querySelectorAll('[data-nav]').forEach(btn => {
+        btn.className = btn.dataset.nav === 'page-wish' ? 'ant-tab-bar-item active' : 'ant-tab-bar-item';
+    });
+    renderWishList();
 }
 
 let isRandomDate = false;
+
+// 历史心愿详情弹窗
+function showWishHistoryDetail(idx) {
+    const w = wishHistory[idx];
+    document.getElementById('wish-history-title').textContent = w.name;
+    let html = `<div class="space-y-2">
+        <div class="flex justify-between"><span style="color:var(--ant-text-tertiary)">目标金额</span><span>${w.target.toLocaleString()}</span></div>
+        <div class="flex justify-between"><span style="color:var(--ant-text-tertiary)">实际存入</span><span>${(w.current || w.target).toLocaleString()}</span></div>
+        <div class="flex justify-between"><span style="color:var(--ant-text-tertiary)">完成日期</span><span>${w.completedDate}</span></div>`;
+    const plans = w.plans || [];
+    plans.forEach(plan => {
+        const tagColor = plan.color === 'orange' ? '#fa8c16' : '#52c41a';
+        html += `<div class="pt-2 mt-2" style="border-top:1px solid var(--ant-border)">
+            <span class="text-xs px-1.5 py-0.5 rounded" style="background:${tagColor}15;color:${tagColor}">${plan.person}</span>`;
+        if (plan.reward) {
+            html += `<div class="mt-1 text-xs" style="color:#d48806"><i class="fas fa-gift mr-1"></i>${plan.reward}</div>`;
+        }
+        if (plan.tasks && plan.tasks.length > 0) {
+            plan.tasks.forEach(t => {
+                html += `<div class="flex items-center gap-1 mt-1"><i class="fas fa-check text-xs" style="color:var(--ant-green)"></i><span class="text-xs ${t.done ? '' : ''}" style="color:var(--ant-text-tertiary)">${t.text}</span></div>`;
+            });
+        }
+        html += `</div>`;
+    });
+    html += `</div>`;
+    document.getElementById('wish-history-content').innerHTML = html;
+    var modal = document.getElementById('wish-history-modal');
+    modal.classList.add('modal-show');
+    modal.style.cssText = 'display:flex!important;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.45)';
+}
+
+function closeWishHistoryModal() {
+    var modal = document.getElementById('wish-history-modal');
+    modal.classList.remove('modal-show');
+    modal.style.cssText = 'display:none!important';
+}
 
 function toggleRandomDate() {
     const input = document.getElementById('new-wish-complete-date');
@@ -2166,23 +2431,15 @@ function toggleRandomDate() {
 
 function initAddWishForm() {
     const today = new Date().toISOString().slice(0, 10);
-    // 设置默认添加日期为今天
-    const dateInput = document.getElementById('new-wish-date');
-    const dateHidden = dateInput.nextElementSibling;
-    dateInput.value = today;
-    if (dateHidden) dateHidden.value = today;
-    // 重置完成日期
+    document.getElementById('new-wish-date').value = today;
     const completeInput = document.getElementById('new-wish-complete-date');
-    const completeHidden = completeInput.nextElementSibling;
     completeInput.value = '';
     completeInput.disabled = false;
     completeInput.style.background = '';
     completeInput.style.color = '';
-    if (completeHidden) completeHidden.value = '';
     document.getElementById('btn-random-date').textContent = '随缘';
     document.getElementById('btn-random-date').className = 'ant-btn-default text-sm px-3 py-2';
     isRandomDate = false;
-    // 重置其他字段
     document.getElementById('new-wish-name').value = '';
     document.getElementById('new-wish-target').value = '';
     document.getElementById('wish-person-brother').checked = true;
@@ -2219,6 +2476,100 @@ function addNewWish() {
         btn.className = btn.dataset.nav === 'page-wish' ? 'ant-tab-bar-item active' : 'ant-tab-bar-item';
     });
     renderWishList();
+}
+
+// ============ 日期滚轮选择器 ============
+let datePickerTarget = null;
+let pickerYear = 2026, pickerMonth = 1, pickerDay = 1;
+
+function openDatePicker(targetId) {
+    datePickerTarget = targetId;
+    const input = document.getElementById(targetId);
+    const now = new Date();
+    let y = now.getFullYear(), m = now.getMonth() + 1, d = now.getDate();
+    if (input.value && input.value !== '随缘') {
+        const parts = input.value.split('-');
+        if (parts.length === 3) { y = parseInt(parts[0]); m = parseInt(parts[1]); d = parseInt(parts[2]); }
+    }
+    pickerYear = y; pickerMonth = m; pickerDay = d;
+    renderPickerColumns();
+    document.getElementById('date-picker-modal').style.display = '';
+}
+
+function closeDatePicker() {
+    document.getElementById('date-picker-modal').style.display = 'none';
+    datePickerTarget = null;
+}
+
+function confirmDatePicker() {
+    if (!datePickerTarget) return;
+    const y = pickerYear, m = String(pickerMonth).padStart(2, '0'), d = String(pickerDay).padStart(2, '0');
+    document.getElementById(datePickerTarget).value = `${y}-${m}-${d}`;
+    closeDatePicker();
+}
+
+function renderPickerColumns() {
+    renderPickerColumn('picker-year', 2020, 2035, pickerYear, '年', val => { pickerYear = val; updateDays(); });
+    renderPickerColumn('picker-month', 1, 12, pickerMonth, '月', val => { pickerMonth = val; updateDays(); });
+    renderPickerDays();
+}
+
+function getDaysInMonth(y, m) {
+    return new Date(y, m, 0).getDate();
+}
+
+function updateDays() {
+    const maxDay = getDaysInMonth(pickerYear, pickerMonth);
+    if (pickerDay > maxDay) pickerDay = maxDay;
+    renderPickerDays();
+}
+
+function renderPickerDays() {
+    const maxDay = getDaysInMonth(pickerYear, pickerMonth);
+    renderPickerColumn('picker-day', 1, maxDay, pickerDay, '日', val => { pickerDay = val; });
+}
+
+function renderPickerColumn(containerId, start, end, selected, suffix, onSelect) {
+    const container = document.getElementById(containerId);
+    let html = '';
+    for (let i = start; i <= end; i++) {
+        const sel = i === selected ? ' selected' : '';
+        html += `<div class="date-picker-item${sel}" data-value="${i}">${i}${suffix}</div>`;
+    }
+    container.innerHTML = html;
+
+    // 滚动到选中项
+    requestAnimationFrame(() => {
+        const items = container.querySelectorAll('.date-picker-item');
+        items.forEach(item => {
+            if (parseInt(item.dataset.value) === selected) {
+                item.scrollIntoView({ block: 'center', behavior: 'instant' });
+            }
+        });
+    });
+
+    // 滚动监听，选中居中项
+    let scrollTimer = null;
+    container.onscroll = () => {
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => {
+            const rect = container.getBoundingClientRect();
+            const centerY = rect.top + rect.height / 2;
+            let closest = null, minDist = Infinity;
+            container.querySelectorAll('.date-picker-item').forEach(item => {
+                const itemRect = item.getBoundingClientRect();
+                const itemCenter = itemRect.top + itemRect.height / 2;
+                const dist = Math.abs(itemCenter - centerY);
+                if (dist < minDist) { minDist = dist; closest = item; }
+            });
+            if (closest) {
+                container.querySelectorAll('.date-picker-item').forEach(el => el.classList.remove('selected'));
+                closest.classList.add('selected');
+                const val = parseInt(closest.dataset.value);
+                onSelect(val);
+            }
+        }, 80);
+    };
 }
 
 // ============ Toast ============
