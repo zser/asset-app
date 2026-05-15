@@ -292,14 +292,16 @@
         <!-- 月/年切换 -->
         <div class="ant-tabs-nav">
             <button class="ant-tabs-tab active" data-chart-period="month" onclick="switchChartPeriod('month')">按月</button>
+            <button class="ant-tabs-tab" data-chart-period="day" onclick="switchChartPeriod('day')">按日</button>
             <button class="ant-tabs-tab" data-chart-period="year" onclick="switchChartPeriod('year')">按年</button>
         </div>
-        <!-- 年份/月份选择器 -->
+        <!-- 年份选择器 -->
         <div id="chart-year-picker" class="hidden bg-white px-4 py-2 flex items-center justify-center" style="border-bottom:1px solid rgba(0,0,0,0.06)">
             <button onclick="changeChartYear(-1)" class="p-2"><i class="fas fa-chevron-left text-xs" style="color:var(--ant-text-tertiary)"></i></button>
             <span class="font-semibold text-sm mx-4" id="chart-year-label">2026年</span>
             <button onclick="changeChartYear(1)" class="p-2"><i class="fas fa-chevron-right text-xs" style="color:var(--ant-text-tertiary)"></i></button>
         </div>
+        <!-- 月份选择器 -->
         <div id="chart-month-picker" class="bg-white px-4 py-2 flex items-center justify-center" style="border-bottom:1px solid rgba(0,0,0,0.06)">
             <button onclick="changeChartMonth(-1)" class="p-2"><i class="fas fa-chevron-left text-xs" style="color:var(--ant-text-tertiary)"></i></button>
             <span class="font-semibold text-sm mx-4" id="chart-month-label">2026年5月</span>
@@ -2182,7 +2184,7 @@ function saveCalendarProfit() {
 }
 
 // ============ 图表 ============
-let chartPeriod = 'month'; // month / year
+let chartPeriod = 'month'; // month / day / year
 let chartDoughnut = null, chartBar = null, chartLine = null;
 let chartYear = 2026;
 let chartMonth = 5;
@@ -2210,9 +2212,9 @@ function switchChartPeriod(period) {
             btn.classList.remove('active');
         }
     });
-    // 显示/隐藏选择器
+    // 显示/隐藏选择器：按日和按月都用月份选择器
     document.getElementById('chart-year-picker').classList.toggle('hidden', period !== 'year');
-    document.getElementById('chart-month-picker').classList.toggle('hidden', period !== 'month');
+    document.getElementById('chart-month-picker').classList.toggle('hidden', period === 'year');
     // 更新标签
     document.getElementById('chart-year-label').textContent = chartYear + '年';
     document.getElementById('chart-month-label').textContent = chartYear + '年' + chartMonth + '月';
@@ -2274,11 +2276,23 @@ function renderCharts() {
 
     // ===== 2. 柱状图 - 总资产走势 =====
     const isMonth = chartPeriod === 'month';
+    const isDay = chartPeriod === 'day';
     const barTitle = document.getElementById('chart-bar-title');
-    barTitle.textContent = isMonth ? '总资产走势' : chartYear + '年总资产';
+    barTitle.textContent = isDay ? chartYear + '年' + chartMonth + '月每日收益' : (isMonth ? '总资产走势' : chartYear + '年总资产');
 
     let barLabels, barData;
-    if (isMonth) {
+    if (isDay) {
+        // 按日：显示选中月每日收益
+        const daysInMonth = new Date(chartYear, chartMonth, 0).getDate();
+        barLabels = [];
+        barData = [];
+        for (let d = 1; d <= daysInMonth; d++) {
+            barLabels.push(d + '日');
+            const dateStr = chartYear + '-' + String(chartMonth).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+            const profit = profitData[dateStr];
+            barData.push(profit ? (profit.total || 0) : 0);
+        }
+    } else if (isMonth) {
         // 按月：显示选中年每月总资产（无历史数据时，显示当前总资产）
         barLabels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
         barData = barLabels.map((_, i) => {
@@ -2298,11 +2312,11 @@ function renderCharts() {
         data: {
             labels: barLabels,
             datasets: [{
-                label: '总资产',
+                label: isDay ? '收益' : '总资产',
                 data: barData,
-                backgroundColor: '#1677ff',
+                backgroundColor: isDay ? barData.map(v => v >= 0 ? '#ff4d4f' : '#52c41a') : '#1677ff',
                 borderRadius: 4,
-                barPercentage: 0.4
+                barPercentage: isDay ? 0.6 : 0.4
             }]
         },
         options: {
@@ -2313,7 +2327,23 @@ function renderCharts() {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
+                            if (isDay) return value.toLocaleString();
                             return (value / 10000).toFixed(0) + '万';
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 0,
+                        callback: function(value, index) {
+                            if (isDay) {
+                                // 日期太多时只显示部分标签
+                                const daysInMonth = barLabels.length;
+                                if (daysInMonth <= 10) return barLabels[index];
+                                if (index % Math.ceil(daysInMonth / 10) === 0) return barLabels[index];
+                                return '';
+                            }
+                            return barLabels[index];
                         }
                     }
                 }
@@ -2321,9 +2351,15 @@ function renderCharts() {
         }
     });
 
-    // ===== 3. 折线图 - 收益趋势分析 =====
+    // ===== 3. 折线图 - 收益趋势分析（保持不变）=====
     const lineTitle = document.getElementById('chart-line-title');
-    lineTitle.textContent = isMonth ? '收益趋势分析' : chartYear + '年收益趋势';
+    if (isDay) {
+        lineTitle.textContent = chartYear + '年收益趋势';
+    } else if (isMonth) {
+        lineTitle.textContent = '收益趋势分析';
+    } else {
+        lineTitle.textContent = chartYear + '年收益趋势';
+    }
 
     let lineLabels, lineData;
     if (isMonth) {
