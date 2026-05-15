@@ -5,8 +5,14 @@
     "current": [],
     "deposit": []
   },
-  "profitData": {},
+  "profitData": {
+    "2026-05-20": {
+      "stock": 12223,
+      "fund": 55563,
+      "total": 67786
+    }
+  },
   "wishes": [],
   "wishHistory": [],
-  "updatedAt": "2026-05-14T10:28:12.922Z"
+  "updatedAt": "2026-05-15T02:27:03.275Z"
 }
