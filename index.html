@@ -133,6 +133,8 @@
     </style>
 </head>
 <body class="min-h-screen max-w-md mx-auto" style="background:var(--ant-bg)">
+    <!-- 调试面板：键盘遮挡排查用，确认修复后删除 -->
+    <div id="kb-debug" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(0,0,0,0.8);color:#0f0;font-size:11px;padding:4px 8px;font-family:monospace;display:none;pointer-events:none;line-height:1.4;"></div>
 
     <!-- ==================== 首页 ==================== -->
     <div id="page-home" class="page active">
@@ -672,7 +674,7 @@
 // ============ GitHub 同步模块 ============
 const LS_DATA = 'asset-app-data';
 const LS_TOKEN = 'gh-token';
-const APP_VERSION = 'v2.0.4';
+const APP_VERSION = 'v2.0.5-debug';
 const LS_OWNER = 'gh-owner';
 const LS_REPO = 'gh-repo';
 const LS_SHA = 'gh-sha';
@@ -1952,24 +1954,36 @@ function recordModalInitVH(contentId) {
     if (!content) return;
 }
 
+// 调试面板显示
+function kbDebug(msg) {
+    const el = document.getElementById('kb-debug');
+    if (el) {
+        el.style.display = 'block';
+        el.textContent = msg;
+    }
+}
+
 function onModalInputFocus(contentId) {
     const content = document.getElementById(contentId);
     if (!content) return;
+
+    const debug = (msg) => kbDebug(`[${contentId}] ${msg}`);
 
     if (window.visualViewport) {
         const viewport = window.visualViewport;
 
         const pushUpContent = () => {
-            // 当前聚焦的 input 元素
             const activeEl = document.activeElement;
+            const tag = activeEl ? activeEl.tagName : 'none';
+            debug(`vv.h=${viewport.height.toFixed(0)} vv.ot=${viewport.offsetTop.toFixed(0)} vv.pt=${viewport.pageTop.toFixed(0)} wiH=${window.innerHeight} tag=${tag}`);
+
             if (!activeEl || (activeEl.tagName !== 'INPUT' && activeEl.tagName !== 'TEXTAREA')) return;
 
-            // input 在 layout viewport 中的位置
             const inputRect = activeEl.getBoundingClientRect();
-            // 可视区域在 layout viewport 中的底部位置
             const visibleBottom = viewport.height + viewport.offsetTop;
-            // input 底部超出可视区域的高度
             const hiddenHeight = inputRect.bottom - visibleBottom;
+
+            debug(`vv.h=${viewport.height.toFixed(0)} ot=${viewport.offsetTop.toFixed(0)} pt=${viewport.pageTop.toFixed(0)} wiH=${window.innerHeight} inputBot=${inputRect.bottom.toFixed(0)} visBot=${visibleBottom.toFixed(0)} hidden=${hiddenHeight.toFixed(0)}`);
 
             if (hiddenHeight > -10) {
                 content.style.transform = `translateY(-${Math.max(hiddenHeight, 0) + 20}px)`;
@@ -1978,7 +1992,6 @@ function onModalInputFocus(contentId) {
             }
         };
 
-        // 移除旧监听
         if (content._kbHandler) {
             viewport.removeEventListener('resize', content._kbHandler);
             viewport.removeEventListener('scroll', content._kbHandler);
@@ -1988,16 +2001,17 @@ function onModalInputFocus(contentId) {
         viewport.addEventListener('scroll', pushUpContent);
         content._kbHandler = pushUpContent;
 
-        // 多次延迟触发，覆盖不同键盘弹出速度
+        debug('focus registered, waiting...');
         setTimeout(pushUpContent, 80);
         setTimeout(pushUpContent, 200);
         setTimeout(pushUpContent, 400);
         setTimeout(pushUpContent, 600);
     } else {
-        // 回退方案：用 window.resize
+        debug('NO visualViewport!');
         const initH = window.innerHeight;
         const resizeHandler = () => {
             const kbHeight = initH - window.innerHeight;
+            debug(`fallback: initH=${initH} curH=${window.innerHeight} kb=${kbHeight}`);
             if (kbHeight > 50) {
                 content.style.transform = `translateY(-${kbHeight * 0.5}px)`;
             } else {
@@ -2027,6 +2041,9 @@ function resetModalPosition(contentId) {
         }
         content._kbHandler = null;
     }
+    // 隐藏调试面板
+    const dbg = document.getElementById('kb-debug');
+    if (dbg) dbg.style.display = 'none';
 }
 
 let depositWishIndex = -1;
