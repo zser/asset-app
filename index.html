@@ -672,7 +672,7 @@
 // ============ GitHub 同步模块 ============
 const LS_DATA = 'asset-app-data';
 const LS_TOKEN = 'gh-token';
-const APP_VERSION = 'v2.0.1';
+const APP_VERSION = 'v2.0.2';
 const LS_OWNER = 'gh-owner';
 const LS_REPO = 'gh-repo';
 const LS_SHA = 'gh-sha';
@@ -1944,77 +1944,73 @@ function closeDepositModalOnBg(e) {
 }
 
 // 通用弹窗键盘遮挡处理
-// 主方案：scrollIntoView（PWA standalone 模式下最可靠）
-// 增强：visualViewport resize 事件（浏览器模式下更精确）
+// PWA standalone 模式下 visualViewport.height 会变小，但 window.innerHeight 不变
+// 所以用 visualViewport 作为主方案，配合 navigator.virtualKeyboard 兜底
 
 function recordModalInitVH(contentId) {
     const content = document.getElementById(contentId);
     if (!content) return;
-    content._initVH = window.innerHeight;
+    // 优先用 screen.height 作为初始值，因为它不会因键盘弹出而改变
+    content._initVH = screen.height;
 }
 
 function onModalInputFocus(contentId) {
     const content = document.getElementById(contentId);
     if (!content) return;
 
-    if (!content._initVH || content._initVH < window.innerHeight) {
-        content._initVH = window.innerHeight;
-    }
+    // 确保 initVH 有值
+    if (!content._initVH) content._initVH = screen.height;
 
-    // 方案1：scrollIntoView — PWA standalone 下最可靠
-    const activeInput = document.activeElement;
-    if (activeInput && (activeInput.tagName === 'INPUT' || activeInput.tagName === 'TEXTAREA')) {
-        setTimeout(() => {
-            activeInput.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        }, 300);
-    }
+    const initVH = content._initVH;
 
-    // 方案2：visualViewport resize — 浏览器模式下精确计算上推距离
-    if (window.visualViewport) {
+    // 核心计算函数
+    const pushUpContent = () => {
+        if (!window.visualViewport) return;
         const viewport = window.visualViewport;
-        const initVH = content._initVH;
+        const currentVH = viewport.height;
+        const kbHeight = initVH - currentVH;
 
-        const resizeHandler = () => {
-            const kbHeight = initVH - viewport.height;
-            if (kbHeight > 80) {
-                const contentRect = content.getBoundingClientRect();
-                const visibleBottom = viewport.offsetTop + viewport.height;
-                const hiddenHeight = contentRect.bottom - visibleBottom;
-                if (hiddenHeight > 0) {
-                    content.style.transform = `translateY(-${hiddenHeight + 20}px)`;
-                } else {
-                    content.style.transform = `translateY(-${kbHeight * 0.4}px)`;
-                }
-            } else {
-                content.style.transform = 'translateY(0)';
-            }
-        };
+        if (kbHeight > 80) {
+            // 计算弹窗内容被遮挡的高度
+            const contentRect = content.getBoundingClientRect();
+            // 可视区域底部 = viewport 顶部偏移 + viewport 高度
+            const visibleBottom = viewport.pageTop + currentVH;
+            // content 的绝对底部位置
+            const contentAbsBottom = contentRect.top + viewport.pageTop + contentRect.height;
+            const hiddenHeight = contentAbsBottom - visibleBottom;
 
-        if (content._kbHandler) {
-            viewport.removeEventListener('resize', content._kbHandler);
-            viewport.removeEventListener('scroll', content._kbHandler);
-        }
-        viewport.addEventListener('resize', resizeHandler);
-        viewport.addEventListener('scroll', resizeHandler);
-        content._kbHandler = resizeHandler;
-        setTimeout(resizeHandler, 300);
-    } else {
-        // 不支持 visualViewport：仅依赖 scrollIntoView
-        const resizeHandler = () => {
-            const currentH = window.innerHeight;
-            const kbHeight = content._initVH - currentH;
-            if (kbHeight > 80) {
-                content.style.transform = `translateY(-${kbHeight * 0.5}px)`;
+            if (hiddenHeight > 0) {
+                content.style.transform = `translateY(-${hiddenHeight + 24}px)`;
             } else {
-                content.style.transform = 'translateY(0)';
+                // 没被直接遮挡但键盘很大，推一部分
+                content.style.transform = `translateY(-${kbHeight * 0.35}px)`;
             }
-        };
-        if (content._kbHandler) {
-            window.removeEventListener('resize', content._kbHandler);
+        } else {
+            content.style.transform = 'translateY(0)';
         }
-        window.addEventListener('resize', resizeHandler);
-        setTimeout(resizeHandler, 300);
-        content._kbHandler = resizeHandler;
+    };
+
+    // 移除旧监听
+    if (content._kbHandler) {
+        window.visualViewport.removeEventListener('resize', content._kbHandler);
+        window.visualViewport.removeEventListener('scroll', content._kbHandler);
+    }
+
+    // 注册 visualViewport 监听（PWA standalone 下也生效）
+    window.visualViewport.addEventListener('resize', pushUpContent);
+    window.visualViewport.addEventListener('scroll', pushUpContent);
+    content._kbHandler = pushUpContent;
+
+    // 多次延迟触发，覆盖不同机型的键盘弹出速度
+    setTimeout(pushUpContent, 100);
+    setTimeout(pushUpContent, 300);
+    setTimeout(pushUpContent, 500);
+
+    // navigator.virtualKeyboard API（Chrome Android 94+）
+    if (navigator.virtualKeyboard) {
+        navigator.virtualKeyboard.overlaysContent = true;
+        navigator.virtualKeyboard.addEventListener('geometrychange', pushUpContent);
+        content._vkHandler = pushUpContent;
     }
 }
 
@@ -2026,14 +2022,14 @@ function resetModalPosition(contentId) {
     const content = document.getElementById(contentId);
     if (!content) return;
     content.style.transform = 'translateY(0)';
-    if (content._kbHandler) {
-        if (window.visualViewport) {
-            window.visualViewport.removeEventListener('resize', content._kbHandler);
-            window.visualViewport.removeEventListener('scroll', content._kbHandler);
-        } else {
-            window.removeEventListener('resize', content._kbHandler);
-        }
+    if (content._kbHandler && window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', content._kbHandler);
+        window.visualViewport.removeEventListener('scroll', content._kbHandler);
         content._kbHandler = null;
+    }
+    if (content._vkHandler && navigator.virtualKeyboard) {
+        navigator.virtualKeyboard.removeEventListener('geometrychange', content._vkHandler);
+        content._vkHandler = null;
     }
 }
 
