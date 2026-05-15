@@ -1,4 +1,4 @@
-const CACHE_NAME = 'asset-app-v2.0.8-debug';
+const CACHE_NAME = 'asset-app-v2.0.9-debug';
 const ASSETS = [
   './',
   './index.html',
