@@ -674,7 +674,7 @@
 // ============ GitHub 同步模块 ============
 const LS_DATA = 'asset-app-data';
 const LS_TOKEN = 'gh-token';
-const APP_VERSION = 'v2.0.5-debug';
+const APP_VERSION = 'v2.0.6-debug';
 const LS_OWNER = 'gh-owner';
 const LS_REPO = 'gh-repo';
 const LS_SHA = 'gh-sha';
@@ -2884,16 +2884,25 @@ if ('serviceWorker' in navigator) {
         reg.addEventListener('updatefound', () => {
             const newWorker = reg.installing;
             newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'activated') {
-                    // 新版本已激活，提示用户刷新
-                    if (navigator.serviceWorker.controller) {
-                        showToast('已更新到最新版本');
-                    }
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // 新 SW 已安装，等待激活后刷新
+                    newWorker.addEventListener('statechange', function onStateChange() {
+                        if (newWorker.state === 'activated') {
+                            newWorker.removeEventListener('statechange', onStateChange);
+                            showToast('已更新到最新版本，正在刷新...');
+                            setTimeout(() => location.reload(), 500);
+                        }
+                    });
                 }
             });
         });
     }).catch(err => {
         console.error('SW registration failed:', err);
+    });
+
+    // 如果 controller 变化（新 SW 接管），也刷新
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        location.reload();
     });
 }
 </script>
