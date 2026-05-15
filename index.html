@@ -2354,7 +2354,7 @@ function renderCharts() {
     // ===== 3. 折线图 - 收益趋势分析（保持不变）=====
     const lineTitle = document.getElementById('chart-line-title');
     if (isDay) {
-        lineTitle.textContent = chartYear + '年收益趋势';
+        lineTitle.textContent = chartYear + '年' + chartMonth + '月收益趋势';
     } else if (isMonth) {
         lineTitle.textContent = '收益趋势分析';
     } else {
