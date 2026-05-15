@@ -909,6 +909,7 @@ function openAddCategoryModal() {
         showToast('最多只能有5个分类');
         return;
     }
+    recordModalInitVH();
     document.getElementById('new-category-name').value = '';
     newCategoryColor = '#52c41a';
     newCategoryIcon = 'fa-piggy-bank';
@@ -1423,6 +1424,7 @@ let addItemCat = '';
 
 function openAddItemModal(cat) {
     addItemCat = cat;
+    recordModalInitVH();
     const catMeta = categories.find(c => c.key === cat);
     document.getElementById('add-item-title').textContent = '添加' + (catMeta ? catMeta.label : cat);
     document.getElementById('add-item-name').value = '';
@@ -1861,6 +1863,7 @@ function renderCalendar() {
 
 function openCalendarModal(dateStr) {
     calendarModalDay = dateStr;
+    recordModalInitVH();
     const data = profitData[dateStr] || { stock: 0, fund: 0 };
     document.getElementById('modal-date-title').textContent = dateStr + ' 收益';
     document.getElementById('modal-stock-input').value = data.stock || '';
@@ -1890,23 +1893,26 @@ function closeDepositModalOnBg(e) {
 }
 
 // 通用弹窗键盘遮挡处理
-// 记录无键盘时的 viewport 高度，键盘弹出后计算差值即为键盘高度
+// 在弹窗打开时记录初始视口高度，focus 时用该值计算键盘高度
 let _modalInitVH = 0;
+
+function recordModalInitVH() {
+    _modalInitVH = window.innerHeight;
+}
 
 function onModalInputFocus(contentId) {
     const content = document.getElementById(contentId);
     if (!content) return;
-    // 记录当前 viewport 高度（键盘弹出前）
-    _modalInitVH = window.innerHeight;
+    // 如果 _modalInitVH 为 0 或已被键盘缩小覆盖，尝试用更大的值
+    if (_modalInitVH < window.innerHeight) {
+        _modalInitVH = window.innerHeight;
+    }
 
     if (window.visualViewport) {
         const viewport = window.visualViewport;
         const resizeHandler = () => {
-            // 键盘弹出后 viewport 变小，差值就是键盘高度
             const kbHeight = _modalInitVH - viewport.height;
             if (kbHeight > 50) {
-                // 弹窗底部在视口中的位置 = viewport底部 - viewport偏移
-                // 弹窗被键盘遮挡的高度 = content底部 - 可视区域底部
                 const contentRect = content.getBoundingClientRect();
                 const visibleBottom = viewport.height + viewport.offsetTop;
                 const hiddenHeight = contentRect.bottom - visibleBottom;
@@ -1921,9 +1927,10 @@ function onModalInputFocus(contentId) {
         };
         viewport.addEventListener('resize', resizeHandler);
         viewport.addEventListener('scroll', resizeHandler);
+        // 立即触发一次
+        resizeHandler();
         content._kbHandler = resizeHandler;
     } else {
-        // 不支持 visualViewport 的回退方案：监听 window.resize
         const resizeHandler = () => {
             const currentH = window.innerHeight;
             const kbHeight = _modalInitVH - currentH;
@@ -1934,6 +1941,7 @@ function onModalInputFocus(contentId) {
             }
         };
         window.addEventListener('resize', resizeHandler);
+        resizeHandler();
         content._kbHandler = resizeHandler;
     }
 }
@@ -1961,6 +1969,7 @@ let depositWishIndex = -1;
 
 function openDepositModal(idx) {
     depositWishIndex = idx;
+    recordModalInitVH();
     const w = wishes[idx];
     document.getElementById('deposit-title').textContent = '存入「' + w.name + '」';
     document.getElementById('deposit-info').textContent = '已存 ' + w.current.toLocaleString() + ' / 目标 ' + w.target.toLocaleString();
@@ -2441,6 +2450,7 @@ let selectedPlanPerson = '哥哥';
 
 function openAddPlanModal(wi) {
     addPlanWishIndex = wi;
+    recordModalInitVH();
     selectedPlanPerson = '哥哥';
     document.getElementById('plan-person-brother').style.cssText = 'background:rgba(250,140,22,0.1);color:#fa8c16;border:2px solid #fa8c16';
     document.getElementById('plan-person-sister').style.cssText = 'background:var(--ant-bg);color:var(--ant-text-tertiary);border:2px solid var(--ant-border)';
