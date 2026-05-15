@@ -150,36 +150,10 @@
                 <span class="ml-auto text-[10px] flex items-center gap-1" id="home-sync-status" style="color:rgba(255,255,255,0.45)"><span class="w-1.5 h-1.5 rounded-full inline-block" style="background:rgba(255,255,255,0.4)"></span>未配置</span>
             </div>
             <!-- 分类占比 -->
-            <div class="grid grid-cols-4 gap-3 mt-4 pt-4" style="border-top:1px solid rgba(255,255,255,0.15)">
-                <div class="text-center">
-                    <div class="text-xs" style="color:rgba(255,255,255,0.65)">股票</div>
-                    <div class="font-bold text-sm mt-0.5" id="home-stock-amount">0</div>
-                    <div class="text-[10px]" style="color:rgba(255,255,255,0.45)" id="home-stock-pct">0%</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-xs" style="color:rgba(255,255,255,0.65)">基金</div>
-                    <div class="font-bold text-sm mt-0.5" id="home-fund-amount">0</div>
-                    <div class="text-[10px]" style="color:rgba(255,255,255,0.45)" id="home-fund-pct">0%</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-xs" style="color:rgba(255,255,255,0.65)">活期</div>
-                    <div class="font-bold text-sm mt-0.5" id="home-current-amount">0</div>
-                    <div class="text-[10px]" style="color:rgba(255,255,255,0.45)" id="home-current-pct">0%</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-xs" style="color:rgba(255,255,255,0.65)">存款</div>
-                    <div class="font-bold text-sm mt-0.5" id="home-deposit-amount">0</div>
-                    <div class="text-[10px]" style="color:rgba(255,255,255,0.45)" id="home-deposit-pct">0%</div>
-                </div>
-            </div>
+            <div id="home-summary-grid" class="grid gap-3 mt-4 pt-4" style="border-top:1px solid rgba(255,255,255,0.15)"></div>
         </div>
         <!-- Tab切换 -->
-        <div class="mx-4 mt-4 ant-tabs-nav">
-            <button class="ant-tabs-tab active" data-tab="stock" onclick="switchHomeTab('stock')">股票</button>
-            <button class="ant-tabs-tab" data-tab="fund" onclick="switchHomeTab('fund')">基金</button>
-            <button class="ant-tabs-tab" data-tab="current" onclick="switchHomeTab('current')">活期</button>
-            <button class="ant-tabs-tab" data-tab="deposit" onclick="switchHomeTab('deposit')">存款</button>
-        </div>
+        <div class="mx-4 mt-4 ant-tabs-nav" id="home-tabs-container"></div>
         <!-- Tab内容 -->
         <div class="mx-4 mt-3 pb-20" id="home-tab-content"></div>
     </div>
@@ -201,12 +175,7 @@
                     </div>
                 </div>
                 <div id="source-type-dropdown" class="hidden" style="border-bottom:1px solid rgba(0,0,0,0.06);background:var(--ant-primary-bg)">
-                    <div class="flex flex-wrap gap-2 p-3">
-                        <button class="source-type-btn text-sm px-4 py-2 rounded-full ant-btn-primary" onclick="selectSourceType('current')">活期理财</button>
-                        <button class="source-type-btn text-sm px-4 py-2 rounded-full ant-btn-default" onclick="selectSourceType('stock')">股票</button>
-                        <button class="source-type-btn text-sm px-4 py-2 rounded-full ant-btn-default" onclick="selectSourceType('fund')">基金</button>
-                        <button class="source-type-btn text-sm px-4 py-2 rounded-full ant-btn-default" onclick="selectSourceType('deposit')">存款</button>
-                    </div>
+                    <div class="flex flex-wrap gap-2 p-3" id="edit-source-type-buttons"></div>
                 </div>
                 <div class="divide-y" style="border-color:rgba(0,0,0,0.06)" id="source-list"></div>
             </div>
@@ -344,12 +313,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex justify-center gap-4 mt-3">
-                    <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--ant-red)"></span><span class="text-xs" style="color:var(--ant-text-secondary)">股票</span></div>
-                    <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--ant-orange)"></span><span class="text-xs" style="color:var(--ant-text-secondary)">基金</span></div>
-                    <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--ant-primary)"></span><span class="text-xs" style="color:var(--ant-text-secondary)">活期</span></div>
-                    <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm" style="background:#6366f1"></span><span class="text-xs" style="color:var(--ant-text-secondary)">存款</span></div>
-                </div>
+                <div class="flex justify-center gap-4 mt-3 flex-wrap" id="chart-doughnut-legend"></div>
             </div>
             <!-- 柱状图 - 总资产走势 -->
             <div class="ant-card p-4">
@@ -502,6 +466,14 @@
                 </div>
             </div>
             <div class="ant-card p-4">
+                <h3 class="font-semibold mb-3 text-sm" style="color:var(--ant-text)">分类管理</h3>
+                <div id="category-list" class="space-y-2 mb-3"></div>
+                <button onclick="openAddCategoryModal()" id="btn-add-category" class="w-full py-2 rounded-lg text-sm" style="background:var(--ant-primary-bg);color:var(--ant-primary);border:1.5px solid var(--ant-primary-border)">
+                    <i class="fas fa-plus mr-1"></i>添加分类
+                </button>
+                <div class="text-xs mt-2" style="color:var(--ant-text-tertiary)">最多5个分类，删除前需清空该分类下的资产</div>
+            </div>
+            <div class="ant-card p-4">
                 <h3 class="font-semibold mb-2 text-sm" style="color:var(--ant-text)">关于</h3>
                 <div class="text-xs" style="color:var(--ant-text-tertiary)">家庭资产管理 v1.0<br>数据存储于 GitHub 私有仓库，两人共享同步。</div>
             </div>
@@ -620,6 +592,43 @@
         </div>
     </div>
 
+    <!-- 添加分类弹窗 -->
+    <div id="add-category-modal" class="fixed inset-0 z-50 items-end justify-center" style="display:none!important;background:rgba(0,0,0,0.45)" onclick="if(event.target===event.currentTarget)closeAddCategoryModal()">
+        <div id="add-category-modal-content" class="bg-white rounded-t-lg w-full max-w-md p-5 transition-transform duration-300">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-semibold text-base" style="color:var(--ant-text)">添加分类</h3>
+                <button onclick="closeAddCategoryModal()" style="color:var(--ant-text-tertiary)"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="mb-4">
+                <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">分类名称</label>
+                <input id="new-category-name" type="text" class="ant-input" placeholder="例：保险" maxlength="4" onfocus="onModalInputFocus('add-category-modal-content')" onblur="onModalInputBlur('add-category-modal-content')">
+            </div>
+            <div class="mb-4">
+                <label class="text-sm block mb-2" style="color:var(--ant-text-secondary)">颜色</label>
+                <div class="flex gap-3" id="category-color-options">
+                    <button class="cat-color-opt w-8 h-8 rounded-full border-2 border-transparent" data-color="#52c41a" style="background:#52c41a" onclick="selectCategoryColor(this)"></button>
+                    <button class="cat-color-opt w-8 h-8 rounded-full border-2 border-transparent" data-color="#13c2c2" style="background:#13c2c2" onclick="selectCategoryColor(this)"></button>
+                    <button class="cat-color-opt w-8 h-8 rounded-full border-2 border-transparent" data-color="#eb2f96" style="background:#eb2f96" onclick="selectCategoryColor(this)"></button>
+                    <button class="cat-color-opt w-8 h-8 rounded-full border-2 border-transparent" data-color="#722ed1" style="background:#722ed1" onclick="selectCategoryColor(this)"></button>
+                    <button class="cat-color-opt w-8 h-8 rounded-full border-2 border-transparent" data-color="#faad14" style="background:#faad14" onclick="selectCategoryColor(this)"></button>
+                    <button class="cat-color-opt w-8 h-8 rounded-full border-2 border-transparent" data-color="#a0d911" style="background:#a0d911" onclick="selectCategoryColor(this)"></button>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="text-sm block mb-2" style="color:var(--ant-text-secondary)">图标</label>
+                <div class="flex gap-3 flex-wrap" id="category-icon-options">
+                    <button class="cat-icon-opt p-2 rounded-lg border-2 border-transparent" data-icon="fa-piggy-bank" onclick="selectCategoryIcon(this)" style="background:var(--ant-bg)"><i class="fas fa-piggy-bank"></i></button>
+                    <button class="cat-icon-opt p-2 rounded-lg border-2 border-transparent" data-icon="fa-landmark" onclick="selectCategoryIcon(this)" style="background:var(--ant-bg)"><i class="fas fa-landmark"></i></button>
+                    <button class="cat-icon-opt p-2 rounded-lg border-2 border-transparent" data-icon="fa-shield-halved" onclick="selectCategoryIcon(this)" style="background:var(--ant-bg)"><i class="fas fa-shield-halved"></i></button>
+                    <button class="cat-icon-opt p-2 rounded-lg border-2 border-transparent" data-icon="fa-gem" onclick="selectCategoryIcon(this)" style="background:var(--ant-bg)"><i class="fas fa-gem"></i></button>
+                    <button class="cat-icon-opt p-2 rounded-lg border-2 border-transparent" data-icon="fa-house" onclick="selectCategoryIcon(this)" style="background:var(--ant-bg)"><i class="fas fa-house"></i></button>
+                    <button class="cat-icon-opt p-2 rounded-lg border-2 border-transparent" data-icon="fa-car" onclick="selectCategoryIcon(this)" style="background:var(--ant-bg)"><i class="fas fa-car"></i></button>
+                </div>
+            </div>
+            <button onclick="confirmAddCategory()" class="w-full ant-btn-primary py-2 rounded-lg font-medium">确定</button>
+        </div>
+    </div>
+
     <!-- 日期选择器弹窗 -->
     <div id="date-picker-modal" style="display:none">
         <div class="date-picker-mask" onclick="closeDatePicker()"></div>
@@ -715,6 +724,8 @@ function loadLocalData() {
         const saved = localStorage.getItem(LS_DATA);
         if (saved) {
             const data = JSON.parse(saved);
+            if (data.categories) categories = data.categories;
+            if (data.categories) categories = data.categories;
             if (data.assetData) assetData = data.assetData;
             if (data.profitData) profitData = data.profitData;
             if (data.wishes) wishes = data.wishes;
@@ -726,7 +737,7 @@ function loadLocalData() {
 function saveLocalData() {
     try {
         localStorage.setItem(LS_DATA, JSON.stringify({
-            assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString()
+            categories, assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString()
         }));
     } catch (e) { console.error('saveLocalData error:', e); }
 }
@@ -738,6 +749,7 @@ async function pullFromGitHub(shouldShowToast = false) {
         const result = await fetchFromGitHub();
         if (result) {
             const data = result.content;
+            if (data.categories) categories = data.categories;
             if (data.assetData) assetData = data.assetData;
             if (data.profitData) profitData = data.profitData;
             if (data.wishes) wishes = data.wishes;
@@ -762,7 +774,7 @@ async function pushToGitHub(shouldShowToast = false) {
     try {
         updateSyncStatus('syncing');
         const sha = localStorage.getItem(LS_SHA) || undefined;
-        const result = await saveToGitHub({ assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString() }, sha);
+        const result = await saveToGitHub({ categories, assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString() }, sha);
         localStorage.setItem(LS_SHA, result.content.sha);
         updateSyncStatus('synced');
         updateLastSyncTime();
@@ -773,7 +785,7 @@ async function pushToGitHub(shouldShowToast = false) {
                 const fresh = await fetchFromGitHub();
                 if (fresh) {
                     localStorage.setItem(LS_SHA, fresh.sha);
-                    const result = await saveToGitHub({ assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString() }, fresh.sha);
+                    const result = await saveToGitHub({ categories, assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString() }, fresh.sha);
                     localStorage.setItem(LS_SHA, result.content.sha);
                     updateSyncStatus('synced');
                     updateLastSyncTime();
@@ -835,7 +847,7 @@ async function testGitHubConnection() {
             showToast('连接成功，文件已存在');
             localStorage.setItem(LS_SHA, result.sha);
         } else {
-            const init = await saveToGitHub({ assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString() });
+            const init = await saveToGitHub({ categories, assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString() });
             localStorage.setItem(LS_SHA, init.content.sha);
             showToast('连接成功，已创建数据文件');
         }
@@ -855,9 +867,153 @@ function loadSettingsForm() {
     }
 }
 
+// ============ 分类管理 ============
+let newCategoryColor = '#52c41a';
+let newCategoryIcon = 'fa-piggy-bank';
+
+function renderCategoryList() {
+    const container = document.getElementById('category-list');
+    if (!container) return;
+    const defaultKeys = ['stock', 'fund', 'current', 'deposit'];
+    container.innerHTML = categories.map(cat => {
+        const itemCount = (assetData[cat.key] || []).length;
+        const isDefault = defaultKeys.includes(cat.key);
+        const canDelete = !isDefault && itemCount === 0;
+        return `<div class="flex items-center justify-between p-2 rounded-lg" style="background:var(--ant-bg)">
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 ${cat.bgClass} rounded flex items-center justify-center">
+                    <i class="fas ${cat.icon} ${cat.textClass} text-xs"></i>
+                </div>
+                <span class="text-sm">${cat.label}</span>
+                ${isDefault ? '<span class="text-xs" style="color:var(--ant-text-quaternary)">(默认)</span>' : ''}
+            </div>
+            ${!isDefault ? `<button onclick="deleteCategory('${cat.key}')" class="text-xs px-2 py-1 rounded ${canDelete ? '' : 'opacity-50 cursor-not-allowed'}" style="color:${canDelete ? 'var(--ant-red)' : 'var(--ant-text-quaternary)'}" ${canDelete ? '' : 'disabled'}><i class="fas fa-trash-alt"></i></button>` : ''}
+        </div>`;
+    }).join('');
+
+    // 更新添加按钮状态
+    const addBtn = document.getElementById('btn-add-category');
+    if (addBtn) {
+        if (categories.length >= 5) {
+            addBtn.disabled = true;
+            addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            addBtn.disabled = false;
+            addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+}
+
+function openAddCategoryModal() {
+    if (categories.length >= 5) {
+        showToast('最多只能有5个分类');
+        return;
+    }
+    document.getElementById('new-category-name').value = '';
+    newCategoryColor = '#52c41a';
+    newCategoryIcon = 'fa-piggy-bank';
+    // 重置选中状态
+    document.querySelectorAll('.cat-color-opt').forEach(btn => {
+        btn.classList.toggle('border-blue-500', btn.dataset.color === newCategoryColor);
+        btn.classList.toggle('border-transparent', btn.dataset.color !== newCategoryColor);
+    });
+    document.querySelectorAll('.cat-icon-opt').forEach(btn => {
+        btn.classList.toggle('border-blue-500', btn.dataset.icon === newCategoryIcon);
+        btn.classList.toggle('border-transparent', btn.dataset.icon !== newCategoryIcon);
+    });
+    var modal = document.getElementById('add-category-modal');
+    modal.classList.add('modal-show');
+    modal.style.cssText = 'display:flex!important;position:fixed;inset:0;z-index:9999;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.45)';
+}
+
+function closeAddCategoryModal() {
+    var modal = document.getElementById('add-category-modal');
+    modal.classList.remove('modal-show');
+    modal.style.cssText = 'display:none!important';
+    resetModalPosition('add-category-modal-content');
+}
+
+function selectCategoryColor(btn) {
+    newCategoryColor = btn.dataset.color;
+    document.querySelectorAll('.cat-color-opt').forEach(b => {
+        b.classList.toggle('border-blue-500', b === btn);
+        b.classList.toggle('border-transparent', b !== btn);
+    });
+}
+
+function selectCategoryIcon(btn) {
+    newCategoryIcon = btn.dataset.icon;
+    document.querySelectorAll('.cat-icon-opt').forEach(b => {
+        b.classList.toggle('border-blue-500', b === btn);
+        b.classList.toggle('border-transparent', b !== btn);
+    });
+}
+
+function confirmAddCategory() {
+    const name = document.getElementById('new-category-name').value.trim();
+    if (!name) { showToast('请输入分类名称'); return; }
+    if (categories.length >= 5) { showToast('最多5个分类'); return; }
+
+    // 生成唯一 key
+    let key = 'cat' + Date.now().toString(36);
+    // 根据 color 生成 bgClass 和 textClass
+    const colorNameMap = {
+        '#52c41a': { bg: 'bg-green-100', text: 'text-green-500' },
+        '#13c2c2': { bg: 'bg-cyan-100', text: 'text-cyan-500' },
+        '#eb2f96': { bg: 'bg-pink-100', text: 'text-pink-500' },
+        '#722ed1': { bg: 'bg-violet-100', text: 'text-violet-500' },
+        '#faad14': { bg: 'bg-amber-100', text: 'text-amber-500' },
+        '#a0d911': { bg: 'bg-lime-100', text: 'text-lime-500' },
+    };
+    const colorClass = colorNameMap[newCategoryColor] || { bg: 'bg-gray-100', text: 'text-gray-500' };
+
+    categories.push({
+        key: key,
+        label: name,
+        icon: newCategoryIcon,
+        color: newCategoryColor,
+        bgClass: colorClass.bg,
+        textClass: colorClass.text
+    });
+    assetData[key] = [];
+    saveData();
+    closeAddCategoryModal();
+    renderCategoryList();
+    renderHomeTabs();
+    renderEditSourceTypeButtons();
+    updateHomeSummary();
+    showToast('添加成功');
+}
+
+function deleteCategory(key) {
+    const cat = categories.find(c => c.key === key);
+    if (!cat) return;
+    const defaultKeys = ['stock', 'fund', 'current', 'deposit'];
+    if (defaultKeys.includes(key)) {
+        showToast('默认分类不能删除');
+        return;
+    }
+    const itemCount = (assetData[key] || []).length;
+    if (itemCount > 0) {
+        showToast('该分类下有 ' + itemCount + ' 个资产，请先清空');
+        return;
+    }
+    if (!confirm('确定删除分类「' + cat.label + '」？')) return;
+
+    categories = categories.filter(c => c.key !== key);
+    delete assetData[key];
+    saveData();
+    renderCategoryList();
+    renderHomeTabs();
+    renderEditSourceTypeButtons();
+    updateHomeSummary();
+    showToast('已删除');
+}
+
 function clearAllData() {
     if (!confirm('确定清空所有数据？此操作不可撤销！')) return;
-    assetData = { stock: [], fund: [], current: [], deposit: [] };
+    // 保留 categories 结构，清空各分类下的资产
+    categories.forEach(cat => { assetData[cat.key] = []; });
     profitData = {};
     wishes = [];
     wishHistory = [];
@@ -868,6 +1024,14 @@ function clearAllData() {
 }
 
 // ============ 数据 ============
+// 分类元数据（动态）
+let categories = [
+    { key: 'stock', label: '股票', icon: 'fa-chart-line', color: '#ff4d4f', bgClass: 'bg-red-100', textClass: 'text-red-500' },
+    { key: 'fund', label: '基金', icon: 'fa-coins', color: '#fa8c16', bgClass: 'bg-orange-100', textClass: 'text-orange-500' },
+    { key: 'current', label: '活期', icon: 'fa-wallet', color: '#1677ff', bgClass: 'bg-blue-100', textClass: 'text-blue-500' },
+    { key: 'deposit', label: '存款', icon: 'fa-building-columns', color: '#6366f1', bgClass: 'bg-purple-100', textClass: 'text-purple-500' },
+];
+
 let assetData = {
     stock: [
         { name: '平安证券', amount: 85000 },
@@ -952,11 +1116,11 @@ function showPage(pageId) {
             : 'ant-tab-bar-item';
     });
     // 页面初始化
-    if (pageId === 'page-home') { renderHomeTabContent(); updateHomeSummary(); }
+    if (pageId === 'page-home') { renderHomeTabs(); renderHomeTabContent(); updateHomeSummary(); }
     if (pageId === 'page-calendar') { renderCalendar(); updateCalSummary(); }
     if (pageId === 'page-chart') { renderCharts(); }
     if (pageId === 'page-wish') { renderWishList(); }
-    if (pageId === 'page-settings') { loadSettingsForm(); }
+    if (pageId === 'page-settings') { loadSettingsForm(); renderCategoryList(); }
     if (pageId === 'page-add-wish') { initAddWishForm(); }
     // 切换 Tab 时拉取最新数据
     if (isConfigured()) pullFromGitHub();
@@ -966,19 +1130,31 @@ function refreshCurrentPage() {
     const activePage = document.querySelector('.page.active');
     if (!activePage) return;
     const pageId = activePage.id;
-    if (pageId === 'page-home') { renderHomeTabContent(); updateHomeSummary(); }
+    if (pageId === 'page-home') { renderHomeTabs(); renderHomeTabContent(); updateHomeSummary(); }
     if (pageId === 'page-calendar') { renderCalendar(); updateCalSummary(); }
     if (pageId === 'page-chart') { renderCharts(); }
     if (pageId === 'page-wish') { renderWishList(); }
 }
 
 // ============ 首页 ============
+function renderHomeTabs() {
+    const container = document.getElementById('home-tabs-container');
+    if (!container) return;
+    // 确保 currentHomeTab 指向有效的分类
+    if (!categories.find(c => c.key === currentHomeTab) && categories.length > 0) {
+        currentHomeTab = categories[0].key;
+    }
+    container.innerHTML = categories.map(cat =>
+        `<button class="ant-tabs-tab ${currentHomeTab === cat.key ? 'active' : ''}" data-tab="${cat.key}" onclick="switchHomeTab('${cat.key}')">${cat.label}</button>`
+    ).join('');
+}
+
 function updateHomeSummary() {
     let total = 0;
     const catTotals = {};
-    Object.keys(assetData).forEach(cat => {
-        catTotals[cat] = assetData[cat].reduce((s, i) => s + i.amount, 0);
-        total += catTotals[cat];
+    categories.forEach(cat => {
+        catTotals[cat.key] = (assetData[cat.key] || []).reduce((s, i) => s + i.amount, 0);
+        total += catTotals[cat.key];
     });
     const totalEl = document.getElementById('total-asset');
     if (isAmountHidden) {
@@ -986,25 +1162,24 @@ function updateHomeSummary() {
     } else {
         totalEl.textContent = total.toLocaleString('zh-CN', { minimumFractionDigits: 2 });
     }
-    const cats = ['stock', 'fund', 'current', 'deposit'];
-    const labels = { stock: 'home-stock', fund: 'home-fund', current: 'home-current', deposit: 'home-deposit' };
-    cats.forEach(cat => {
-        const amt = document.getElementById(labels[cat] + '-amount');
-        const pct = document.getElementById(labels[cat] + '-pct');
-        if (amt) amt.textContent = Math.round(catTotals[cat]).toLocaleString();
-        if (pct) pct.textContent = total > 0 ? ((catTotals[cat] / total) * 100).toFixed(1) + '%' : '0%';
-    });
+    // 动态渲染分类占比
+    const grid = document.getElementById('home-summary-grid');
+    if (!grid) return;
+    grid.style.gridTemplateColumns = `repeat(${Math.min(categories.length, 5)}, 1fr)`;
+    grid.innerHTML = categories.map(cat => {
+        const amt = catTotals[cat.key];
+        const pct = total > 0 ? ((amt / total) * 100).toFixed(1) : '0';
+        return `<div class="text-center">
+            <div class="text-xs" style="color:rgba(255,255,255,0.65)">${cat.label}</div>
+            <div class="font-bold text-sm mt-0.5">${Math.round(amt).toLocaleString()}</div>
+            <div class="text-[10px]" style="color:rgba(255,255,255,0.45)">${pct}%</div>
+        </div>`;
+    }).join('');
 }
 
 function switchHomeTab(tab) {
     currentHomeTab = tab;
-    document.querySelectorAll('[data-tab]').forEach(btn => {
-        if (btn.dataset.tab === tab) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
+    renderHomeTabs();
     renderHomeTabContent();
 }
 
@@ -1044,20 +1219,12 @@ function renderHomeTabContent() {
 }
 
 function getCategoryIconHtml(category) {
-    // 根据资产类别返回统一的图标HTML（统一使用 Font Awesome 普通图标）
-    const iconMap = {
-        stock:  { icon: 'fa-chart-line',      bg: 'bg-red-100',   color: 'text-red-500' },
-        fund:   { icon: 'fa-coins',           bg: 'bg-orange-100', color: 'text-orange-500' },
-        current: { icon: 'fa-wallet',          bg: 'bg-blue-100',  color: 'text-blue-500' },
-        deposit: { icon: 'fa-building-columns', bg: 'bg-purple-100', color: 'text-purple-500' }
-    };
-    const conf = iconMap[category] || iconMap['current'];
-    return `<div class="w-10 h-10 ${conf.bg} rounded-lg flex items-center justify-center"><i class="fas ${conf.icon} ${conf.color} text-lg"></i></div>`;
+    const cat = categories.find(c => c.key === category);
+    if (!cat) return `<div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center"><i class="fas fa-question text-gray-500 text-lg"></i></div>`;
+    return `<div class="w-10 h-10 ${cat.bgClass} rounded-lg flex items-center justify-center"><i class="fas ${cat.icon} ${cat.textClass} text-lg"></i></div>`;
 }
 
 function getAssetIconHtml(item, category) {
-    // 优先使用 category 参数，否则尝试从 item 推断
-    // 但统一按类别使用图标，忽略 item.isAlipay / item.isWechat 等品牌标识
     return getCategoryIconHtml(category);
 }
 
@@ -1256,8 +1423,8 @@ let addItemCat = '';
 
 function openAddItemModal(cat) {
     addItemCat = cat;
-    const labels = { stock: '股票', fund: '基金', current: '活期理财', deposit: '存款' };
-    document.getElementById('add-item-title').textContent = '添加' + labels[cat];
+    const catMeta = categories.find(c => c.key === cat);
+    document.getElementById('add-item-title').textContent = '添加' + (catMeta ? catMeta.label : cat);
     document.getElementById('add-item-name').value = '';
     document.getElementById('add-item-amount').value = '';
     var modal = document.getElementById('add-item-modal');
@@ -1278,9 +1445,8 @@ function confirmAddItem() {
     if (!name) { showToast('请输入名称'); return; }
     if (isNaN(amount) || amount <= 0) { showToast('请输入金额'); return; }
     const cat = addItemCat;
-    const iconMap = { stock:'fa-chart-line', fund:'fa-coins', current:'fa-wallet', deposit:'fa-building-columns' };
-    const colorMap = { stock:'red', fund:'orange', current:'blue', deposit:'purple' };
-    const newItem = { name: name, amount: amount, icon: iconMap[cat], color: colorMap[cat] };
+    const catMeta = categories.find(c => c.key === cat);
+    const newItem = { name: name, amount: amount, icon: catMeta ? catMeta.icon : 'fa-wallet', color: catMeta ? catMeta.color : 'blue' };
     assetData[cat].push(newItem);
     saveData();
     closeAddItemModal();
@@ -1400,20 +1566,21 @@ function calculateTotal() {
 }
 
 // ============ 编辑功能 ============
+function renderEditSourceTypeButtons() {
+    const container = document.getElementById('edit-source-type-buttons');
+    if (!container) return;
+    container.innerHTML = categories.map(cat =>
+        `<button class="source-type-btn text-sm px-4 py-2 rounded-full ${editSourceType === cat.key ? 'ant-btn-primary' : 'ant-btn-default'}" onclick="selectSourceType('${cat.key}')">${cat.label}</button>`
+    ).join('');
+}
+
 function openEditSource() {
-    editSourceType = 'current';
+    editSourceType = categories.length > 0 ? categories[0].key : 'stock';
     editSelectedIndex = -1;
     editIsNewItem = false;
-    document.getElementById('source-type-text').textContent = '活期理财';
-    // 重置按钮样式
-    document.querySelectorAll('.source-type-btn').forEach(btn => {
-        btn.className = 'source-type-btn text-sm px-4 py-2 rounded-full';
-        if (btn.textContent === '活期理财') {
-            btn.classList.add('ant-btn-primary');
-        } else {
-            btn.classList.add('ant-btn-default');
-        }
-    });
+    const cat = categories.find(c => c.key === editSourceType);
+    document.getElementById('source-type-text').textContent = cat ? cat.label : '';
+    renderEditSourceTypeButtons();
     renderSourceList();
     showPage('page-edit-source');
 }
@@ -1429,16 +1596,9 @@ function selectSourceType(type) {
     editSourceType = type;
     editSelectedIndex = -1;
     editIsNewItem = false;
-    const labels = { current: '活期理财', stock: '股票', fund: '基金', deposit: '存款' };
-    document.getElementById('source-type-text').textContent = labels[type];
-    document.querySelectorAll('.source-type-btn').forEach(btn => {
-        btn.className = 'source-type-btn text-sm px-4 py-2 rounded-full';
-        if (btn.textContent === labels[type]) {
-            btn.classList.add('ant-btn-primary');
-        } else {
-            btn.classList.add('ant-btn-default');
-        }
-    });
+    const cat = categories.find(c => c.key === type);
+    document.getElementById('source-type-text').textContent = cat ? cat.label : type;
+    renderEditSourceTypeButtons();
     document.getElementById('source-type-dropdown').classList.add('hidden');
     document.getElementById('source-type-arrow').style.transform = '';
     renderSourceList();
@@ -1508,9 +1668,8 @@ function confirmEditAddItem() {
     if (!name) { showToast('请输入名称'); return; }
     if (isNaN(amount) || amount <= 0) { showToast('请输入金额'); return; }
     const cat = editSourceType;
-    const iconMap = { stock:'fa-chart-line', fund:'fa-coins', current:'fa-wallet', deposit:'fa-building-columns' };
-    const colorMap = { stock:'red', fund:'orange', current:'blue', deposit:'purple' };
-    const newItem = { name: name, amount: amount, icon: iconMap[cat], color: colorMap[cat] };
+    const catMeta = categories.find(c => c.key === cat);
+    const newItem = { name: name, amount: amount, icon: catMeta ? catMeta.icon : 'fa-wallet', color: catMeta ? catMeta.color : 'blue' };
     assetData[cat].push(newItem);
     saveData();
     closeAddItemModal();
@@ -1982,26 +2141,26 @@ function switchChartPeriod(period) {
 }
 
 function renderCharts() {
-    // 计算各分类总额
+    // 计算各分类总额（从 categories 遍历）
     const catTotals = {};
-    Object.keys(assetData).forEach(cat => {
-        catTotals[cat] = assetData[cat].reduce((s, i) => s + i.amount, 0);
+    categories.forEach(cat => {
+        catTotals[cat.key] = (assetData[cat.key] || []).reduce((s, i) => s + i.amount, 0);
     });
-    const totalAsset = catTotals.stock + catTotals.fund + catTotals.current + catTotals.deposit;
-    
+    const totalAsset = categories.reduce((s, cat) => s + catTotals[cat.key], 0);
+
     // 更新环状图中间的总资产显示
     document.getElementById('chart-total-asset').textContent = totalAsset.toLocaleString('zh-CN', {maximumFractionDigits: 0});
-    
+
     // ===== 1. 环状图 - 资产占比 =====
     const doughnutCtx = document.getElementById('chart-doughnut').getContext('2d');
     if (chartDoughnut) chartDoughnut.destroy();
     chartDoughnut = new Chart(doughnutCtx, {
         type: 'doughnut',
         data: {
-            labels: ['股票', '基金', '活期', '存款'],
+            labels: categories.map(c => c.label),
             datasets: [{
-                data: [catTotals.stock, catTotals.fund, catTotals.current, catTotals.deposit],
-                backgroundColor: ['#ff4d4f', '#fa8c16', '#1677ff', '#6366f1'],
+                data: categories.map(c => catTotals[c.key]),
+                backgroundColor: categories.map(c => c.color),
                 borderWidth: 2,
                 borderColor: '#fff'
             }]
@@ -2026,6 +2185,14 @@ function renderCharts() {
         }
     });
     
+    // 渲染饼图图例
+    const legendEl = document.getElementById('chart-doughnut-legend');
+    if (legendEl) {
+        legendEl.innerHTML = categories.map(cat =>
+            `<div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm" style="background:${cat.color}"></span><span class="text-xs" style="color:var(--ant-text-secondary)">${cat.label}</span></div>`
+        ).join('');
+    }
+
     // ===== 2. 柱状图 - 总资产走势 =====
     const isMonth = chartPeriod === 'month';
     const barTitle = document.getElementById('chart-bar-title');
