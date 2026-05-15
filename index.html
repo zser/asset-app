@@ -674,7 +674,7 @@
 // ============ GitHub 同步模块 ============
 const LS_DATA = 'asset-app-data';
 const LS_TOKEN = 'gh-token';
-const APP_VERSION = 'v2.0.6-debug';
+const APP_VERSION = 'v2.0.7-debug';
 const LS_OWNER = 'gh-owner';
 const LS_REPO = 'gh-repo';
 const LS_SHA = 'gh-sha';
@@ -1963,9 +1963,17 @@ function kbDebug(msg) {
     }
 }
 
+// 记录键盘弹出前的初始高度
+let _debugInitVH = 0;
+
 function onModalInputFocus(contentId) {
     const content = document.getElementById(contentId);
     if (!content) return;
+
+    // 记录 focus 时刻的 viewport 高度
+    if (!_debugInitVH) {
+        _debugInitVH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    }
 
     const debug = (msg) => kbDebug(`[${contentId}] ${msg}`);
 
@@ -1974,16 +1982,15 @@ function onModalInputFocus(contentId) {
 
         const pushUpContent = () => {
             const activeEl = document.activeElement;
-            const tag = activeEl ? activeEl.tagName : 'none';
-            debug(`vv.h=${viewport.height.toFixed(0)} vv.ot=${viewport.offsetTop.toFixed(0)} vv.pt=${viewport.pageTop.toFixed(0)} wiH=${window.innerHeight} tag=${tag}`);
-
             if (!activeEl || (activeEl.tagName !== 'INPUT' && activeEl.tagName !== 'TEXTAREA')) return;
 
             const inputRect = activeEl.getBoundingClientRect();
+            const contentRect = content.getBoundingClientRect();
             const visibleBottom = viewport.height + viewport.offsetTop;
             const hiddenHeight = inputRect.bottom - visibleBottom;
+            const kbHeight = _debugInitVH - viewport.height;
 
-            debug(`vv.h=${viewport.height.toFixed(0)} ot=${viewport.offsetTop.toFixed(0)} pt=${viewport.pageTop.toFixed(0)} wiH=${window.innerHeight} inputBot=${inputRect.bottom.toFixed(0)} visBot=${visibleBottom.toFixed(0)} hidden=${hiddenHeight.toFixed(0)}`);
+            debug(`initH=${_debugInitVH} vvH=${viewport.height.toFixed(0)} kbH=${kbHeight.toFixed(0)} ot=${viewport.offsetTop.toFixed(0)} pt=${viewport.pageTop.toFixed(0)} wiH=${window.innerHeight} iBot=${inputRect.bottom.toFixed(0)} cBot=${contentRect.bottom.toFixed(0)} visBot=${visibleBottom.toFixed(0)} hid=${hiddenHeight.toFixed(0)} sH=${screen.height}`);
 
             if (hiddenHeight > -10) {
                 content.style.transform = `translateY(-${Math.max(hiddenHeight, 0) + 20}px)`;
@@ -2001,11 +2008,12 @@ function onModalInputFocus(contentId) {
         viewport.addEventListener('scroll', pushUpContent);
         content._kbHandler = pushUpContent;
 
-        debug('focus registered, waiting...');
+        debug(`init! initH=${_debugInitVH} sH=${screen.height}`);
         setTimeout(pushUpContent, 80);
         setTimeout(pushUpContent, 200);
         setTimeout(pushUpContent, 400);
         setTimeout(pushUpContent, 600);
+        setTimeout(pushUpContent, 1000);
     } else {
         debug('NO visualViewport!');
         const initH = window.innerHeight;
@@ -2041,6 +2049,8 @@ function resetModalPosition(contentId) {
         }
         content._kbHandler = null;
     }
+    // 重置初始高度记录
+    _debugInitVH = 0;
     // 隐藏调试面板
     const dbg = document.getElementById('kb-debug');
     if (dbg) dbg.style.display = 'none';
