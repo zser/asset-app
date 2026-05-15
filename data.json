@@ -25,7 +25,7 @@
   "wishes": [
     {
       "name": "122",
-      "current": 0,
+      "current": 22233,
       "target": 111,
       "date": "2026-05-15",
       "completeDate": "随缘",
@@ -46,5 +46,5 @@
     }
   ],
   "wishHistory": [],
-  "updatedAt": "2026-05-15T02:27:54.187Z"
+  "updatedAt": "2026-05-15T02:28:00.604Z"
 }
