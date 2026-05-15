@@ -1644,25 +1644,52 @@ function closeDepositModalOnBg(e) {
 }
 
 // 通用弹窗键盘遮挡处理
+// 记录无键盘时的 viewport 高度，键盘弹出后计算差值即为键盘高度
+let _modalInitVH = 0;
+
 function onModalInputFocus(contentId) {
-    if (!window.visualViewport) return;
     const content = document.getElementById(contentId);
     if (!content) return;
-    const viewport = window.visualViewport;
-    const resizeHandler = () => {
-        const contentRect = content.getBoundingClientRect();
-        const viewportBottom = viewport.height + viewport.offsetTop;
-        const hiddenHeight = contentRect.bottom - viewportBottom;
-        if (hiddenHeight > -20) {
-            content.style.transform = `translateY(-${Math.max(hiddenHeight + 20, 0)}px)`;
-        } else {
-            content.style.transform = 'translateY(0)';
-        }
-    };
-    resizeHandler();
-    viewport.addEventListener('resize', resizeHandler);
-    viewport.addEventListener('scroll', resizeHandler);
-    content._kbHandler = resizeHandler;
+    // 记录当前 viewport 高度（键盘弹出前）
+    _modalInitVH = window.innerHeight;
+
+    if (window.visualViewport) {
+        const viewport = window.visualViewport;
+        const resizeHandler = () => {
+            // 键盘弹出后 viewport 变小，差值就是键盘高度
+            const kbHeight = _modalInitVH - viewport.height;
+            if (kbHeight > 50) {
+                // 弹窗底部在视口中的位置 = viewport底部 - viewport偏移
+                // 弹窗被键盘遮挡的高度 = content底部 - 可视区域底部
+                const contentRect = content.getBoundingClientRect();
+                const visibleBottom = viewport.height + viewport.offsetTop;
+                const hiddenHeight = contentRect.bottom - visibleBottom;
+                if (hiddenHeight > -10) {
+                    content.style.transform = `translateY(-${hiddenHeight + 16}px)`;
+                } else {
+                    content.style.transform = `translateY(-${kbHeight * 0.3}px)`;
+                }
+            } else {
+                content.style.transform = 'translateY(0)';
+            }
+        };
+        viewport.addEventListener('resize', resizeHandler);
+        viewport.addEventListener('scroll', resizeHandler);
+        content._kbHandler = resizeHandler;
+    } else {
+        // 不支持 visualViewport 的回退方案：监听 window.resize
+        const resizeHandler = () => {
+            const currentH = window.innerHeight;
+            const kbHeight = _modalInitVH - currentH;
+            if (kbHeight > 50) {
+                content.style.transform = `translateY(-${kbHeight * 0.5}px)`;
+            } else {
+                content.style.transform = 'translateY(0)';
+            }
+        };
+        window.addEventListener('resize', resizeHandler);
+        content._kbHandler = resizeHandler;
+    }
 }
 
 function onModalInputBlur(contentId) {
@@ -1674,8 +1701,12 @@ function resetModalPosition(contentId) {
     if (!content) return;
     content.style.transform = 'translateY(0)';
     if (content._kbHandler) {
-        window.visualViewport.removeEventListener('resize', content._kbHandler);
-        window.visualViewport.removeEventListener('scroll', content._kbHandler);
+        if (window.visualViewport) {
+            window.visualViewport.removeEventListener('resize', content._kbHandler);
+            window.visualViewport.removeEventListener('scroll', content._kbHandler);
+        } else {
+            window.removeEventListener('resize', content._kbHandler);
+        }
         content._kbHandler = null;
     }
 }
