@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -672,7 +672,7 @@
 // ============ GitHub 同步模块 ============
 const LS_DATA = 'asset-app-data';
 const LS_TOKEN = 'gh-token';
-const APP_VERSION = 'v2.0.3';
+const APP_VERSION = 'v2.0.4';
 const LS_OWNER = 'gh-owner';
 const LS_REPO = 'gh-repo';
 const LS_SHA = 'gh-sha';
@@ -1950,37 +1950,29 @@ function closeDepositModalOnBg(e) {
 function recordModalInitVH(contentId) {
     const content = document.getElementById(contentId);
     if (!content) return;
-    // 记录当前无键盘时的视口高度（弹窗打开时键盘还没弹出）
-    content._initVH = window.innerHeight;
 }
 
 function onModalInputFocus(contentId) {
     const content = document.getElementById(contentId);
     if (!content) return;
 
-    // 如果 _initVH 为 0 或已被其他操作覆盖，用 window.innerHeight（键盘弹出前的正确值）
-    if (!content._initVH || content._initVH < window.innerHeight) {
-        content._initVH = window.innerHeight;
-    }
-
-    const initVH = content._initVH;
-
     if (window.visualViewport) {
         const viewport = window.visualViewport;
+
         const pushUpContent = () => {
-            // 键盘弹出后 viewport 变小，差值就是键盘高度
-            const kbHeight = initVH - viewport.height;
-            if (kbHeight > 50) {
-                // contentRect.bottom 是相对于 layout viewport 的
-                // visibleBottom = viewport.height + viewport.offsetTop 也是相对于 layout viewport
-                const contentRect = content.getBoundingClientRect();
-                const visibleBottom = viewport.height + viewport.offsetTop;
-                const hiddenHeight = contentRect.bottom - visibleBottom;
-                if (hiddenHeight > -10) {
-                    content.style.transform = `translateY(-${hiddenHeight + 16}px)`;
-                } else {
-                    content.style.transform = `translateY(-${kbHeight * 0.3}px)`;
-                }
+            // 当前聚焦的 input 元素
+            const activeEl = document.activeElement;
+            if (!activeEl || (activeEl.tagName !== 'INPUT' && activeEl.tagName !== 'TEXTAREA')) return;
+
+            // input 在 layout viewport 中的位置
+            const inputRect = activeEl.getBoundingClientRect();
+            // 可视区域在 layout viewport 中的底部位置
+            const visibleBottom = viewport.height + viewport.offsetTop;
+            // input 底部超出可视区域的高度
+            const hiddenHeight = inputRect.bottom - visibleBottom;
+
+            if (hiddenHeight > -10) {
+                content.style.transform = `translateY(-${Math.max(hiddenHeight, 0) + 20}px)`;
             } else {
                 content.style.transform = 'translateY(0)';
             }
@@ -1996,15 +1988,16 @@ function onModalInputFocus(contentId) {
         viewport.addEventListener('scroll', pushUpContent);
         content._kbHandler = pushUpContent;
 
-        // 立即触发一次 + 多次延迟触发
-        pushUpContent();
-        setTimeout(pushUpContent, 100);
-        setTimeout(pushUpContent, 300);
+        // 多次延迟触发，覆盖不同键盘弹出速度
+        setTimeout(pushUpContent, 80);
+        setTimeout(pushUpContent, 200);
+        setTimeout(pushUpContent, 400);
+        setTimeout(pushUpContent, 600);
     } else {
-        // 不支持 visualViewport 的回退方案
+        // 回退方案：用 window.resize
+        const initH = window.innerHeight;
         const resizeHandler = () => {
-            const currentH = window.innerHeight;
-            const kbHeight = initVH - currentH;
+            const kbHeight = initH - window.innerHeight;
             if (kbHeight > 50) {
                 content.style.transform = `translateY(-${kbHeight * 0.5}px)`;
             } else {
