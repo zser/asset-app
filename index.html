@@ -592,6 +592,25 @@
         </div>
     </div>
 
+    <!-- 编辑资产弹窗 -->
+    <div id="edit-item-modal" class="fixed inset-0 z-50 items-end justify-center" style="display:none!important;background:rgba(0,0,0,0.45)" onclick="if(event.target===event.currentTarget)closeEditItemModal()">
+        <div id="edit-item-modal-content" class="bg-white rounded-t-lg w-full max-w-md p-5 transition-transform duration-300">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-semibold text-base" style="color:var(--ant-text)" id="edit-item-title">编辑资产</h3>
+                <button onclick="closeEditItemModal()" style="color:var(--ant-text-tertiary)"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="mb-4">
+                <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">名称</label>
+                <input id="edit-item-name" type="text" class="ant-input" placeholder="资产名称" onfocus="onModalInputFocus('edit-item-modal-content')" onblur="onModalInputBlur('edit-item-modal-content')">
+            </div>
+            <div class="mb-4">
+                <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">金额（元）</label>
+                <input id="edit-item-amount" type="number" class="ant-input" placeholder="0.00" inputmode="decimal" onfocus="onModalInputFocus('edit-item-modal-content')" onblur="onModalInputBlur('edit-item-modal-content')">
+            </div>
+            <button onclick="confirmEditItem()" class="w-full ant-btn-primary py-2 rounded-lg font-medium">保存</button>
+        </div>
+    </div>
+
     <!-- 添加分类弹窗 -->
     <div id="add-category-modal" class="fixed inset-0 z-50 items-end justify-center" style="display:none!important;background:rgba(0,0,0,0.45)" onclick="if(event.target===event.currentTarget)closeAddCategoryModal()">
         <div id="add-category-modal-content" class="bg-white rounded-t-lg w-full max-w-md p-5 transition-transform duration-300">
@@ -1238,17 +1257,45 @@ function deleteHomeItem(cat, idx) {
     showToast('已删除「' + name + '」');
 }
 
+// 编辑资产弹窗
+let editItemCat = '';
+let editItemIdx = -1;
+
 function editHomeItem(cat, idx) {
     // 如果有滑动操作，不触发点击
     if (isOpen) return;
-    editSourceType = cat;
-    editSelectedIndex = idx;
-    editIsNewItem = false;
+    editItemCat = cat;
+    editItemIdx = idx;
     const item = assetData[cat][idx];
-    document.getElementById('amount-source-label').textContent = item.name;
-    currentAmount = '0';
-    document.getElementById('amount-display').textContent = currentAmount;
-    showPage('page-edit-amount');
+    document.getElementById('edit-item-name').value = item.name;
+    document.getElementById('edit-item-amount').value = item.amount;
+    recordModalInitVH();
+    var modal = document.getElementById('edit-item-modal');
+    modal.classList.add('modal-show');
+    modal.style.cssText = 'display:flex!important;position:fixed;inset:0;z-index:9999;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.45)';
+}
+
+function closeEditItemModal() {
+    var modal = document.getElementById('edit-item-modal');
+    modal.classList.remove('modal-show');
+    modal.style.cssText = 'display:none!important';
+    resetModalPosition('edit-item-modal-content');
+}
+
+function confirmEditItem() {
+    if (editItemIdx < 0) return;
+    const name = document.getElementById('edit-item-name').value.trim();
+    const amount = parseFloat(document.getElementById('edit-item-amount').value);
+    if (!name) { showToast('请输入名称'); return; }
+    if (isNaN(amount) || amount <= 0) { showToast('请输入有效金额'); return; }
+
+    assetData[editItemCat][editItemIdx].name = name;
+    assetData[editItemCat][editItemIdx].amount = amount;
+    saveData();
+    closeEditItemModal();
+    renderHomeTabContent();
+    updateHomeSummary();
+    showToast('已保存');
 }
 
 // ============ 拖拽排序 ============
