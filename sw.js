@@ -1,4 +1,4 @@
-const CACHE_NAME = 'asset-app-v1';
+const CACHE_NAME = 'asset-app-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
   );
+  // 新版本立即激活，不等待旧版本关闭
   self.skipWaiting();
 });
 
@@ -20,6 +21,7 @@ self.addEventListener('activate', e => {
       Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     )
   );
+  // 立即接管所有客户端
   self.clients.claim();
 });
 
@@ -29,6 +31,7 @@ self.addEventListener('fetch', e => {
 
   e.respondWith(
     caches.match(e.request).then(cached => {
+      // 优先网络，网络成功则更新缓存
       const fetched = fetch(e.request).then(response => {
         if (response.ok) {
           const clone = response.clone();
@@ -36,7 +39,7 @@ self.addEventListener('fetch', e => {
         }
         return response;
       }).catch(() => cached);
-      return cached || fetched;
+      return fetched;
     })
   );
 });

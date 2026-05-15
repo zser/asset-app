@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>资产管理</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1677ff">
@@ -2858,10 +2861,23 @@ function showToast(msg) {
     }
 })();
 
-// 注册 Service Worker
+// 注册 Service Worker，每次加载检查更新
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').then(() => {
-        console.log('Service Worker registered');
+    navigator.serviceWorker.register('sw.js').then(reg => {
+        // 每次加载都检查 SW 更新
+        reg.update();
+        // 监听新 SW 激活，自动刷新页面
+        reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'activated') {
+                    // 新版本已激活，提示用户刷新
+                    if (navigator.serviceWorker.controller) {
+                        showToast('已更新到最新版本');
+                    }
+                }
+            });
+        });
     }).catch(err => {
         console.error('SW registration failed:', err);
     });
