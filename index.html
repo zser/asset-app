@@ -1831,10 +1831,7 @@ function saveDeposit() {
     if (isNaN(amount) || amount <= 0) { showToast('请输入金额'); return; }
     const idx = depositWishIndex;
     const w = wishes[idx];
-    const oldCurrent = w.current;
     w.current += amount;
-    saveData();
-    closeDepositModal();
 
     // 判断是否达成
     if (w.current >= w.target) {
@@ -1850,9 +1847,12 @@ function saveDeposit() {
         });
         wishes.splice(idx, 1);
         saveData();
+        closeDepositModal();
         // 弹出庆祝弹窗 + 撒花
         showWishCompleteModal(w);
     } else {
+        saveData();
+        closeDepositModal();
         renderWishDetailContent(idx);
         showToast('已存入 ' + amount.toLocaleString());
     }
