@@ -10,9 +10,14 @@
       "stock": 12223,
       "fund": 55563,
       "total": 67786
+    },
+    "2026-05-14": {
+      "stock": 12,
+      "fund": 34,
+      "total": 46
     }
   },
   "wishes": [],
   "wishHistory": [],
-  "updatedAt": "2026-05-15T02:27:03.275Z"
+  "updatedAt": "2026-05-15T02:27:15.338Z"
 }
