@@ -490,27 +490,27 @@
     </div>
 
     <!-- ==================== 添加数据源弹窗 ==================== -->
-    <div id="add-item-modal" class="fixed inset-0 z-50 items-end justify-center" style="display:none!important;background:rgba(0,0,0,0.45)">
-        <div class="bg-white rounded-t-lg w-full max-w-md p-5">
+    <div id="add-item-modal" class="fixed inset-0 z-50 items-end justify-center" style="display:none!important;background:rgba(0,0,0,0.45)" onclick="closeAddItemModalOnBg(event)">
+        <div id="add-item-modal-content" class="bg-white rounded-t-lg w-full max-w-md p-5 transition-transform duration-300">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="font-semibold text-base" style="color:var(--ant-text)" id="add-item-title">添加数据源</h3>
                 <button onclick="closeAddItemModal()" style="color:var(--ant-text-tertiary)"><i class="fas fa-times"></i></button>
             </div>
             <div class="mb-4">
                 <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">名称</label>
-                <input id="add-item-name" type="text" class="ant-input" placeholder="请输入数据源名称">
+                <input id="add-item-name" type="text" class="ant-input" placeholder="请输入数据源名称" onfocus="onModalInputFocus('add-item-modal-content')" onblur="onModalInputBlur('add-item-modal-content')">
             </div>
             <div class="mb-4">
                 <label class="text-sm block mb-1" style="color:var(--ant-text-secondary)">金额（元）</label>
-                <input id="add-item-amount" type="number" class="ant-input" placeholder="0.00" inputmode="decimal">
+                <input id="add-item-amount" type="number" class="ant-input" placeholder="0.00" inputmode="decimal" onfocus="onModalInputFocus('add-item-modal-content')" onblur="onModalInputBlur('add-item-modal-content')">
             </div>
             <button onclick="confirmAddItem()" class="w-full ant-btn-primary py-2 rounded-lg font-medium">确定</button>
         </div>
     </div>
 
     <!-- ==================== 日历输入弹窗 ==================== -->
-    <div id="calendar-modal" class="fixed inset-0 z-50 items-end justify-center" style="display:none!important;background:rgba(0,0,0,0.45)">
-        <div class="bg-white rounded-t-lg w-full max-w-md p-5">
+    <div id="calendar-modal" class="fixed inset-0 z-50 items-end justify-center" style="display:none!important;background:rgba(0,0,0,0.45)" onclick="closeCalendarModalOnBg(event)">
+        <div id="calendar-modal-content" class="bg-white rounded-t-lg w-full max-w-md p-5 transition-transform duration-300">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="font-semibold text-base" style="color:var(--ant-text)" id="modal-date-title">输入收益</h3>
                 <button onclick="closeCalendarModal()" style="color:var(--ant-text-tertiary)"><i class="fas fa-times"></i></button>
@@ -518,11 +518,11 @@
             <div class="grid grid-cols-2 gap-3 mb-4">
                 <div>
                     <label class="text-xs" style="color:var(--ant-text-tertiary)">股票收益</label>
-                    <input id="modal-stock-input" type="number" class="ant-input mt-1" placeholder="0.00">
+                    <input id="modal-stock-input" type="number" class="ant-input mt-1" placeholder="0.00" onfocus="onModalInputFocus('calendar-modal-content')" onblur="onModalInputBlur('calendar-modal-content')">
                 </div>
                 <div>
                     <label class="text-xs" style="color:var(--ant-text-tertiary)">基金收益</label>
-                    <input id="modal-fund-input" type="number" class="ant-input mt-1" placeholder="0.00">
+                    <input id="modal-fund-input" type="number" class="ant-input mt-1" placeholder="0.00" onfocus="onModalInputFocus('calendar-modal-content')" onblur="onModalInputBlur('calendar-modal-content')">
                 </div>
             </div>
             <button onclick="saveCalendarProfit()" class="w-full ant-btn-primary py-2 rounded-lg font-medium">保存</button>
@@ -530,15 +530,15 @@
     </div>
 
     <!-- 存入金额弹窗 -->
-    <div id="deposit-modal" class="fixed inset-0 z-50 items-end justify-center" style="display:none!important;background:rgba(0,0,0,0.45)">
-        <div class="bg-white rounded-t-lg w-full max-w-md p-5">
+    <div id="deposit-modal" class="fixed inset-0 z-50 items-end justify-center" style="display:none!important;background:rgba(0,0,0,0.45)" onclick="closeDepositModalOnBg(event)">
+        <div id="deposit-modal-content" class="bg-white rounded-t-lg w-full max-w-md p-5 transition-transform duration-300">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="font-semibold text-base" style="color:var(--ant-text)" id="deposit-title">存入金额</h3>
                 <button onclick="closeDepositModal()" style="color:var(--ant-text-tertiary)"><i class="fas fa-times"></i></button>
             </div>
             <div class="mb-3">
                 <div class="text-xs mb-1" style="color:var(--ant-text-tertiary)" id="deposit-info">已存 0 / 目标 0</div>
-                <input id="deposit-amount" type="number" class="ant-input" placeholder="输入存入金额" inputmode="decimal">
+                <input id="deposit-amount" type="number" class="ant-input" placeholder="输入存入金额" inputmode="decimal" onfocus="onModalInputFocus('deposit-modal-content')" onblur="onModalInputBlur('deposit-modal-content')">
             </div>
             <div class="flex gap-2 mb-4">
                 <button onclick="addDepositQuick(100)" class="flex-1 py-2 rounded-lg text-sm" style="background:var(--ant-bg)">+100</button>
@@ -1043,9 +1043,30 @@ function onDragEnd(e) {
     dragSrcIdx = -1;
 }
 
+// 首页资产项的触摸处理（整合滑动删除 + 拖拽排序）
+let homeSwipeEl = null;
+let homeSwipeOffset = 0;
+let homeSwipeStartX = 0;
+let homeSwipeStartY = 0;
+let homeIsSwipeOpen = false;
+
 function onItemTouchStart(e, cat, idx) {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
+    homeSwipeStartX = e.touches[0].clientX;
+    homeSwipeStartY = e.touches[0].clientY;
+    homeSwipeEl = e.currentTarget;
+    homeSwipeOffset = 0;
+
+    // 如果有其他卡片处于打开状态，先关闭
+    if (homeIsSwipeOpen) {
+        document.querySelectorAll('.swipe-content').forEach(el => {
+            el.style.transform = 'translateX(0)';
+        });
+        homeIsSwipeOpen = false;
+    }
+
+    // 长按触发拖拽
     longPressTimer = setTimeout(() => {
         isDragMode = true;
         dragSrcIdx = idx;
@@ -1056,15 +1077,38 @@ function onItemTouchStart(e, cat, idx) {
 }
 
 function onItemTouchMove(e) {
+    const dx = e.touches[0].clientX - touchStartX;
+    const dy = e.touches[0].clientY - touchStartY;
+
     if (!isDragMode) {
-        // 如果横向移动，取消长按
-        const dx = Math.abs(e.touches[0].clientX - touchStartX);
-        const dy = Math.abs(e.touches[0].clientY - touchStartY);
-        if (dx > dy && dx > 10) {
+        // 横向滑动：取消长按，执行滑动删除
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+            clearTimeout(longPressTimer);
+
+            // 滑动删除逻辑
+            if (homeSwipeEl) {
+                const moveX = e.touches[0].clientX - homeSwipeStartX;
+                const moveY = e.touches[0].clientY - homeSwipeStartY;
+                // 纵向滑动大于横向时不处理
+                if (Math.abs(moveY) > Math.abs(moveX)) return;
+                // 只处理左滑
+                if (moveX > 0) {
+                    homeSwipeOffset = 0;
+                } else {
+                    homeSwipeOffset = Math.max(moveX, -70);
+                }
+                homeSwipeEl.style.transform = `translateX(${homeSwipeOffset}px)`;
+                homeSwipeEl.style.transition = 'none';
+            }
+        }
+        // 纵向滑动：取消长按（不做其他处理）
+        else if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
             clearTimeout(longPressTimer);
         }
         return;
     }
+
+    // 拖拽模式
     e.preventDefault();
     const touch = e.touches[0];
     const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
@@ -1083,10 +1127,24 @@ function onItemTouchMove(e) {
 
 function onItemTouchEnd(e) {
     clearTimeout(longPressTimer);
-    if (!isDragMode) {
-        // 正常的滑动删除流程
+
+    // 处理滑动删除结束
+    if (!isDragMode && homeSwipeEl) {
+        homeSwipeEl.style.transition = 'transform 0.25s ease';
+        if (homeSwipeOffset < -35) {
+            homeSwipeEl.style.transform = 'translateX(-70px)';
+            homeIsSwipeOpen = true;
+        } else {
+            homeSwipeEl.style.transform = 'translateX(0)';
+            homeIsSwipeOpen = false;
+        }
+        homeSwipeEl = null;
+        homeSwipeOffset = 0;
         return;
     }
+
+    if (!isDragMode) return;
+
     e.preventDefault();
     document.querySelectorAll('.swipe-wrapper').forEach(el => {
         el.classList.remove('dragging', 'drag-over');
@@ -1124,6 +1182,7 @@ function closeAddItemModal() {
     var modal = document.getElementById('add-item-modal');
     modal.classList.remove('modal-show');
     modal.style.cssText = 'display:none!important';
+    resetModalPosition('add-item-modal-content');
 }
 
 function confirmAddItem() {
@@ -1569,6 +1628,56 @@ function closeCalendarModal() {
     var cmodal = document.getElementById('calendar-modal');
     cmodal.classList.remove('modal-show');
     cmodal.style.cssText = 'display:none!important';
+    resetModalPosition('calendar-modal-content');
+}
+
+function closeCalendarModalOnBg(e) {
+    if (e.target === e.currentTarget) closeCalendarModal();
+}
+
+function closeAddItemModalOnBg(e) {
+    if (e.target === e.currentTarget) closeAddItemModal();
+}
+
+function closeDepositModalOnBg(e) {
+    if (e.target === e.currentTarget) closeDepositModal();
+}
+
+// 通用弹窗键盘遮挡处理
+function onModalInputFocus(contentId) {
+    if (!window.visualViewport) return;
+    const content = document.getElementById(contentId);
+    if (!content) return;
+    const viewport = window.visualViewport;
+    const resizeHandler = () => {
+        const contentRect = content.getBoundingClientRect();
+        const viewportBottom = viewport.height + viewport.offsetTop;
+        const hiddenHeight = contentRect.bottom - viewportBottom;
+        if (hiddenHeight > -20) {
+            content.style.transform = `translateY(-${Math.max(hiddenHeight + 20, 0)}px)`;
+        } else {
+            content.style.transform = 'translateY(0)';
+        }
+    };
+    resizeHandler();
+    viewport.addEventListener('resize', resizeHandler);
+    viewport.addEventListener('scroll', resizeHandler);
+    content._kbHandler = resizeHandler;
+}
+
+function onModalInputBlur(contentId) {
+    setTimeout(() => resetModalPosition(contentId), 150);
+}
+
+function resetModalPosition(contentId) {
+    const content = document.getElementById(contentId);
+    if (!content) return;
+    content.style.transform = 'translateY(0)';
+    if (content._kbHandler) {
+        window.visualViewport.removeEventListener('resize', content._kbHandler);
+        window.visualViewport.removeEventListener('scroll', content._kbHandler);
+        content._kbHandler = null;
+    }
 }
 
 let depositWishIndex = -1;
@@ -1588,6 +1697,7 @@ function closeDepositModal() {
     var modal = document.getElementById('deposit-modal');
     modal.classList.remove('modal-show');
     modal.style.cssText = 'display:none!important';
+    resetModalPosition('deposit-modal-content');
     depositWishIndex = -1;
 }
 
