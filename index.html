@@ -1892,12 +1892,12 @@ function updateCalSummary() {
     const rateEl = document.getElementById('cal-profit-rate');
     
     if (totalProfit >= 0) {
-        profitEl.textContent = '+' + totalProfit.toFixed(2);
+        profitEl.textContent = '+' + Math.round(totalProfit);
         profitEl.style.color = 'var(--ant-red)';
         rateEl.textContent = '+' + (Math.random() * 2).toFixed(2) + '%';
         rateEl.style.color = 'var(--ant-red)';
     } else {
-        profitEl.textContent = totalProfit.toFixed(2);
+        profitEl.textContent = Math.round(totalProfit);
         profitEl.style.color = 'var(--ant-green)';
         rateEl.textContent = '-' + (Math.random() * 2).toFixed(2) + '%';
         rateEl.style.color = 'var(--ant-green)';
@@ -1930,7 +1930,7 @@ function renderCalendar() {
             cls += ' has-data';
             cls += val >= 0 ? ' positive' : ' negative';
             const textColor = val >= 0 ? 'color:#ff4d4f' : 'color:#52c41a';
-            profitHtml = `<span class="day-profit" style="${textColor}">${val >= 0 ? '+' : ''}${val}</span>`;
+            profitHtml = `<span class="day-profit" style="${textColor}">${val >= 0 ? '+' : ''}${Math.round(val)}</span>`;
         }
         if (isToday) cls += ' today';
         html += `<div class="${cls}" onclick="openCalendarModal('${dateStr}')">
