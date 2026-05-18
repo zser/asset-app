@@ -1976,19 +1976,27 @@ function closeDepositModalOnBg(e) {
 // PWA standalone 模式下 visualViewport.height 会变小，但 window.innerHeight 不变
 // 所以用 visualViewport 作为主方案，配合 navigator.virtualKeyboard 兜底
 
+// 记录弹窗打开时的视口高度（键盘弹出前的正确值）
 function recordModalInitVH(contentId) {
     const content = document.getElementById(contentId);
     if (!content) return;
+    // 使用 visualViewport 或 window.innerHeight 作为初始高度
+    // 这个值在弹窗打开时记录，键盘弹出前是正确的全屏高度
+    content._initVH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 }
 
 function onModalInputFocus(contentId) {
     const content = document.getElementById(contentId);
     if (!content) return;
 
+    // 使用弹窗打开时记录的 initVH，如果没有则用当前值（兜底）
+    if (!content._initVH) {
+        content._initVH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    }
+    const initVH = content._initVH;
+
     if (window.visualViewport) {
         const viewport = window.visualViewport;
-        // 记录初始高度
-        const initVH = viewport.height;
 
         const pushUpContent = () => {
             const activeEl = document.activeElement;
@@ -1996,21 +2004,27 @@ function onModalInputFocus(contentId) {
 
             const inputRect = activeEl.getBoundingClientRect();
             const currentVH = viewport.height;
-            // 键盘高度 = 初始高度 - 当前高度
+            // 键盘高度 = 初始高度 - 当前高度（浏览器中 visualViewport 会缩小）
             const kbHeight = Math.max(0, initVH - currentVH);
-            // 如果 visualViewport 没变化，用估算的键盘高度（Android 键盘通常占 40-50% 屏幕高度）
+            // 如果 visualViewport 没变化（PWA standalone 情况），用估算的键盘高度
             const estimatedKbHeight = kbHeight > 0 ? kbHeight : Math.floor(screen.height * 0.45);
             // 可视区域底部
             const visibleBottom = currentVH + viewport.offsetTop;
             // 输入框被遮挡的高度
             const hiddenHeight = inputRect.bottom - visibleBottom;
 
-            if (hiddenHeight > -10 || kbHeight === 0) {
-                const minPush = estimatedKbHeight + 40;
-                const pushAmount = kbHeight > 0 ? Math.max(hiddenHeight, 0) + 40 : minPush;
-                content.style.transform = `translateY(-${pushAmount}px)`;
+            // 计算上推距离
+            if (kbHeight > 0) {
+                // 浏览器模式：visualViewport 正确缩小，精确计算遮挡
+                if (hiddenHeight > 0) {
+                    content.style.transform = `translateY(-${hiddenHeight + 20}px)`;
+                } else {
+                    content.style.transform = 'translateY(0)';
+                }
             } else {
-                content.style.transform = 'translateY(0)';
+                // PWA standalone 模式：visualViewport 没变化，用估算值
+                const minPush = estimatedKbHeight + 40;
+                content.style.transform = `translateY(-${minPush}px)`;
             }
         };
 
@@ -2028,7 +2042,8 @@ function onModalInputFocus(contentId) {
         setTimeout(pushUpContent, 500);
         setTimeout(pushUpContent, 800);
     } else {
-        const initH = window.innerHeight;
+        // 无 visualViewport 的回退方案
+        const initH = content._initVH || window.innerHeight;
         const resizeHandler = () => {
             const kbHeight = initH - window.innerHeight;
             if (kbHeight > 50) {
@@ -2044,13 +2059,30 @@ function onModalInputFocus(contentId) {
 }
 
 function onModalInputBlur(contentId) {
-    setTimeout(() => resetModalPosition(contentId), 200);
+    // 判断是否是同弹窗内切换到另一个 input
+    // 延迟一点检查，让 focus 事件先触发
+    setTimeout(() => {
+        const content = document.getElementById(contentId);
+        if (!content) return;
+
+        const activeEl = document.activeElement;
+        // 如果当前聚焦元素是同弹窗内的另一个 input，不 reset
+        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+            if (content.contains(activeEl)) {
+                // 同弹窗内切换，不处理，让 focus 事件处理
+                return;
+            }
+        }
+        // 否则（焦点离开弹窗或无焦点），reset 位置
+        resetModalPosition(contentId);
+    }, 50);
 }
 
 function resetModalPosition(contentId) {
     const content = document.getElementById(contentId);
     if (!content) return;
     content.style.transform = 'translateY(0)';
+    content._initVH = null;
     if (content._kbHandler) {
         if (window.visualViewport) {
             window.visualViewport.removeEventListener('resize', content._kbHandler);
