@@ -322,14 +322,14 @@
                 </div>
                 <div class="flex justify-center gap-4 mt-3 flex-wrap" id="chart-doughnut-legend"></div>
             </div>
-            <!-- 柱状图 - 总资产走势 -->
+            <!-- 组合图 - 总资产与累计收益 -->
             <div class="ant-card p-4">
-                <h3 class="font-semibold mb-3 text-sm" style="color:var(--ant-text)" id="chart-bar-title">总资产走势（月）</h3>
+                <h3 class="font-semibold mb-3 text-sm" style="color:var(--ant-text)" id="chart-bar-title">资产与收益走势</h3>
                 <canvas id="chart-bar" height="200"></canvas>
             </div>
             <!-- 折线图 - 收益趋势分析 -->
             <div class="ant-card p-4">
-                <h3 class="font-semibold mb-3 text-sm" style="color:var(--ant-text)" id="chart-line-title">收益趋势分析（月）</h3>
+                <h3 class="font-semibold mb-3 text-sm" style="color:var(--ant-text)" id="chart-line-title">收益趋势分析</h3>
                 <canvas id="chart-line" height="200"></canvas>
             </div>
         </div>
@@ -2331,97 +2331,185 @@ function renderCharts() {
         ).join('');
     }
 
-    // ===== 2. 柱状图 - 总资产走势 =====
+    // ===== 2. 组合图 - 总资产与累计收益 =====
     const isMonth = chartPeriod === 'month';
     const isDay = chartPeriod === 'day';
     const barTitle = document.getElementById('chart-bar-title');
-    barTitle.textContent = isDay ? chartYear + '年' + chartMonth + '月总资产' : (isMonth ? '总资产走势' : chartYear + '年总资产');
+    barTitle.textContent = isDay ? chartYear + '年' + chartMonth + '月资产与收益' : (isMonth ? '资产与收益走势' : chartYear + '年资产与收益');
 
-    let barLabels, barData;
+    // 判断日期是否是今天或未来
+    const todayBar = new Date();
+    todayBar.setHours(0, 0, 0, 0);
+    const isTodayOrFutureBar = (y, m, d) => {
+        const date = new Date(y, m - 1, d);
+        return date >= todayBar;
+    };
+
+    let chartLabels, assetDataArr, profitDataArr;
     if (isDay) {
-        // 按日：显示选中月每日总资产
+        // 按日：显示选中月每日总资产和累计收益
         const daysInMonth = new Date(chartYear, chartMonth, 0).getDate();
         const monthPrefix = chartYear + '-' + String(chartMonth).padStart(2, '0');
-        barLabels = [];
-        barData = [];
-        // 填充该月每天的记录，无记录的天用前一天的值
+        chartLabels = [];
+        assetDataArr = [];
+        profitDataArr = [];
         let lastTotal = 0;
+        let cumProfit = 0;
         for (let d = 1; d <= daysInMonth; d++) {
-            barLabels.push(d + '日');
             const dateStr = monthPrefix + '-' + String(d).padStart(2, '0');
             const record = assetHistory.find(h => h.date === dateStr);
-            if (record) lastTotal = record.total;
-            barData.push(lastTotal);
+            const profit = profitData[dateStr];
+            if (record) {
+                lastTotal = record.total;
+                chartLabels.push(d + '日');
+                assetDataArr.push(lastTotal);
+                cumProfit += profit ? (profit.total || 0) : 0;
+                profitDataArr.push(cumProfit);
+            } else if (!isTodayOrFutureBar(chartYear, chartMonth, d)) {
+                chartLabels.push(d + '日');
+                assetDataArr.push(lastTotal);
+                cumProfit += profit ? (profit.total || 0) : 0;
+                profitDataArr.push(cumProfit);
+            }
         }
     } else if (isMonth) {
-        // 按月：从 assetHistory 取每月末总资产
-        barLabels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-        barData = barLabels.map((_, i) => {
-            const month = i + 1;
-            const monthPrefix = chartYear + '-' + String(month).padStart(2, '0');
-            // 取该月最后一条记录
+        // 按月：从 assetHistory 取每月末总资产，profitData 取月度累计
+        const currentMonth = todayBar.getMonth() + 1;
+        const currentYear = todayBar.getFullYear();
+        chartLabels = [];
+        assetDataArr = [];
+        profitDataArr = [];
+        let cumProfit = 0;
+        for (let m = 1; m <= 12; m++) {
+            const isFutureMonth = chartYear > currentYear || (chartYear === currentYear && m > currentMonth);
+            if (isFutureMonth) continue;
+            chartLabels.push(m + '月');
+            const monthPrefix = chartYear + '-' + String(m).padStart(2, '0');
             const monthRecords = assetHistory.filter(h => h.date.startsWith(monthPrefix));
-            if (monthRecords.length > 0) return monthRecords[monthRecords.length - 1].total;
-            return 0;
-        });
+            assetDataArr.push(monthRecords.length > 0 ? monthRecords[monthRecords.length - 1].total : 0);
+            // 累计到该月的收益
+            Object.keys(profitData).forEach(dateStr => {
+                const d = new Date(dateStr);
+                if (d.getFullYear() === chartYear && d.getMonth() + 1 === m) {
+                    cumProfit += profitData[dateStr].total || 0;
+                }
+            });
+            profitDataArr.push(cumProfit);
+        }
     } else {
-        // 按年：从 assetHistory 取每年末总资产
-        barLabels = [];
-        barData = [];
+        // 按年：从 assetHistory 取每年末总资产，profitData 取年度累计
+        chartLabels = [];
+        assetDataArr = [];
+        profitDataArr = [];
         const years = new Set();
         assetHistory.forEach(h => years.add(h.date.slice(0, 4)));
-        // 确保选中年也在其中
         years.add(String(chartYear));
         const sortedYears = Array.from(years).sort();
         sortedYears.forEach(y => {
-            barLabels.push(y + '年');
+            chartLabels.push(y + '年');
             const yearRecords = assetHistory.filter(h => h.date.startsWith(y));
-            if (yearRecords.length > 0) {
-                barData.push(yearRecords[yearRecords.length - 1].total);
-            } else {
-                barData.push(0);
-            }
+            assetDataArr.push(yearRecords.length > 0 ? yearRecords[yearRecords.length - 1].total : 0);
+            let yearProfit = 0;
+            Object.keys(profitData).forEach(dateStr => {
+                const d = new Date(dateStr);
+                if (d.getFullYear() === parseInt(y)) yearProfit += profitData[dateStr].total || 0;
+            });
+            profitDataArr.push(yearProfit);
         });
     }
+
+    const profitColors = profitDataArr.map(v => v >= 0 ? '#ff4d4f' : '#52c41a');
 
     const barCtx = document.getElementById('chart-bar').getContext('2d');
     if (chartBar) chartBar.destroy();
     chartBar = new Chart(barCtx, {
-        type: 'bar',
+        type: 'line',
         data: {
-            labels: barLabels,
-            datasets: [{
-                label: '总资产',
-                data: barData,
-                backgroundColor: '#1677ff',
-                borderRadius: 4,
-                barPercentage: isDay ? 0.6 : 0.4
-            }]
+            labels: chartLabels,
+            datasets: [
+                {
+                    label: '总资产',
+                    data: assetDataArr,
+                    borderColor: '#1677ff',
+                    backgroundColor: 'rgba(22,119,255,0.1)',
+                    yAxisID: 'y',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHoverRadius: 5
+                },
+                {
+                    label: '累计收益',
+                    data: profitDataArr,
+                    borderColor: '#fa8c16',
+                    backgroundColor: 'transparent',
+                    yAxisID: 'y1',
+                    tension: 0.3,
+                    pointBackgroundColor: profitColors,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    borderWidth: 2
+                }
+            ]
         },
         options: {
             responsive: true,
-            plugins: { legend: { display: false } },
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: { boxWidth: 12, padding: 15 }
+                },
+                tooltip: {
+                    enabled: true,
+                    callbacks: {
+                        label: function(ctx) {
+                            const label = ctx.dataset.label;
+                            const v = ctx.parsed.y;
+                            if (label === '总资产') {
+                                return '总资产: ' + v.toLocaleString() + '元';
+                            } else {
+                                return '累计收益: ' + (v >= 0 ? '+' : '') + v.toLocaleString() + '元';
+                            }
+                        }
+                    }
+                }
+            },
             scales: {
                 y: {
+                    type: 'linear',
+                    position: 'left',
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
                             return (value / 10000).toFixed(0) + '万';
                         }
-                    }
+                    },
+                    title: { display: true, text: '总资产', color: '#1677ff' }
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    grid: { drawOnChartArea: false },
+                    ticks: {
+                        callback: function(value) {
+                            return (value >= 0 ? '+' : '') + (value / 10000).toFixed(1) + '万';
+                        }
+                    },
+                    title: { display: true, text: '累计收益', color: '#fa8c16' }
                 },
                 x: {
                     ticks: {
                         maxRotation: 0,
                         callback: function(value, index) {
                             if (isDay) {
-                                // 日期太多时只显示部分标签
-                                const daysInMonth = barLabels.length;
-                                if (daysInMonth <= 10) return barLabels[index];
-                                if (index % Math.ceil(daysInMonth / 10) === 0) return barLabels[index];
+                                const daysInMonth = chartLabels.length;
+                                if (daysInMonth <= 10) return chartLabels[index];
+                                if (index % Math.ceil(daysInMonth / 10) === 0) return chartLabels[index];
                                 return '';
                             }
-                            return barLabels[index];
+                            return chartLabels[index];
                         }
                     }
                 }
@@ -2429,7 +2517,7 @@ function renderCharts() {
         }
     });
 
-    // ===== 3. 折线图 - 收益趋势分析（保持不变）=====
+    // ===== 3. 折线图 - 收益趋势分析 =====
     const lineTitle = document.getElementById('chart-line-title');
     if (isDay) {
         lineTitle.textContent = chartYear + '年' + chartMonth + '月收益趋势';
@@ -2439,34 +2527,49 @@ function renderCharts() {
         lineTitle.textContent = chartYear + '年收益趋势';
     }
 
+    // 判断日期是否是今天或未来
+    const todayLine = new Date();
+    todayLine.setHours(0, 0, 0, 0);
+    const isTodayOrFutureLine = (y, m, d) => {
+        const date = new Date(y, m - 1, d);
+        return date >= todayLine;
+    };
+
     let lineLabels, lineData;
     if (isDay) {
-        // 按日：显示选中月每日收益
         const daysInMonth = new Date(chartYear, chartMonth, 0).getDate();
         lineLabels = [];
         lineData = [];
         for (let d = 1; d <= daysInMonth; d++) {
-            lineLabels.push(d + '日');
             const dateStr = chartYear + '-' + String(chartMonth).padStart(2, '0') + '-' + String(d).padStart(2, '0');
             const profit = profitData[dateStr];
-            lineData.push(profit ? (profit.total || 0) : 0);
+            if (profit) {
+                lineLabels.push(d + '日');
+                lineData.push(profit.total || 0);
+            } else if (!isTodayOrFutureLine(chartYear, chartMonth, d)) {
+                lineLabels.push(d + '日');
+                lineData.push(0);
+            }
         }
     } else if (isMonth) {
-        // 按月：从 profitData 聚合每月收益
-        lineLabels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-        lineData = lineLabels.map((_, i) => {
-            const month = i + 1;
+        const currentMonth = todayLine.getMonth() + 1;
+        const currentYear = todayLine.getFullYear();
+        lineLabels = [];
+        lineData = [];
+        for (let m = 1; m <= 12; m++) {
+            const isFutureMonth = chartYear > currentYear || (chartYear === currentYear && m > currentMonth);
+            if (isFutureMonth) continue;
+            lineLabels.push(m + '月');
             let sum = 0;
             Object.keys(profitData).forEach(dateStr => {
                 const d = new Date(dateStr);
-                if (d.getFullYear() === chartYear && d.getMonth() + 1 === month) {
+                if (d.getFullYear() === chartYear && d.getMonth() + 1 === m) {
                     sum += profitData[dateStr].total || 0;
                 }
             });
-            return sum;
-        });
+            lineData.push(sum);
+        }
     } else {
-        // 按年：从 profitData 聚合每年收益
         lineLabels = [];
         lineData = [];
         const years = new Set();
@@ -2482,9 +2585,9 @@ function renderCharts() {
             lineData.push(sum);
         });
     }
-    
-    const colors = lineData.map(v => v >= 0 ? '#ff4d4f' : '#52c41a');
-    
+
+    const lineColors = lineData.map(v => v >= 0 ? '#ff4d4f' : '#52c41a');
+
     const lineCtx = document.getElementById('chart-line').getContext('2d');
     if (chartLine) chartLine.destroy();
     chartLine = new Chart(lineCtx, {
@@ -2497,7 +2600,7 @@ function renderCharts() {
                 borderColor: '#1677ff',
                 backgroundColor: 'rgba(22,119,255,0.08)',
                 tension: 0.3,
-                pointBackgroundColor: colors,
+                pointBackgroundColor: lineColors,
                 pointRadius: 3,
                 pointHoverRadius: 5,
                 fill: true
