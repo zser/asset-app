@@ -1731,8 +1731,9 @@ function editExistingSource(idx) {
 }
 
 function openEditAddModal() {
+    addItemCat = editSourceType;  // 设置当前分类
     const labels = { current: '活期理财', stock: '股票', fund: '基金', deposit: '存款' };
-    document.getElementById('add-item-title').textContent = '新增' + labels[editSourceType];
+    document.getElementById('add-item-title').textContent = '新增' + (labels[editSourceType] || editSourceType);
     document.getElementById('add-item-name').value = '';
     document.getElementById('add-item-amount').value = '';
     var modal = document.getElementById('add-item-modal');
