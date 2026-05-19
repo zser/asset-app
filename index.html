@@ -2471,7 +2471,7 @@ function renderCharts() {
                             if (label === '总资产') {
                                 return '总资产: ' + v.toLocaleString() + '元';
                             } else {
-                                return '累计收益: ' + (v >= 0 ? '+' : '') + v.toLocaleString() + '元';
+                                return '累计收益: ' + Math.round(v).toLocaleString() + '元';
                             }
                         }
                     }
@@ -2484,10 +2484,10 @@ function renderCharts() {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return (value / 10000).toFixed(0) + '万';
+                            return (value / 10000).toFixed(0);
                         }
                     },
-                    title: { display: true, text: '总资产', color: '#1677ff' }
+                    title: { display: true, text: '总资产（万）', color: '#1677ff' }
                 },
                 y1: {
                     type: 'linear',
@@ -2495,10 +2495,10 @@ function renderCharts() {
                     grid: { drawOnChartArea: false },
                     ticks: {
                         callback: function(value) {
-                            return (value >= 0 ? '+' : '') + (value / 10000).toFixed(1) + '万';
+                            return (value / 10000).toFixed(0);
                         }
                     },
-                    title: { display: true, text: '累计收益', color: '#fa8c16' }
+                    title: { display: true, text: '累计收益（万）', color: '#fa8c16' }
                 },
                 x: {
                     ticks: {
@@ -2617,7 +2617,7 @@ function renderCharts() {
                     callbacks: {
                         label: function(ctx) {
                             const v = ctx.parsed.y;
-                            return '收益: ' + (v >= 0 ? '+' : '') + v.toLocaleString() + '元';
+                            return '收益: ' + Math.round(v).toLocaleString() + '元';
                         }
                     }
                 }
@@ -2627,7 +2627,7 @@ function renderCharts() {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return (value >= 0 ? '+' : '') + value.toLocaleString();
+                            return Math.round(value);
                         }
                     }
                 },
