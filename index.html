@@ -802,7 +802,7 @@ async function pushToGitHub(shouldShowToast = false) {
     try {
         updateSyncStatus('syncing');
         const sha = localStorage.getItem(LS_SHA) || undefined;
-        const result = await saveToGitHub({ categories, assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString() }, sha);
+        const result = await saveToGitHub({ categories, assetData, profitData, assetHistory, wishes, wishHistory, updatedAt: new Date().toISOString() }, sha);
         localStorage.setItem(LS_SHA, result.content.sha);
         updateSyncStatus('synced');
         updateLastSyncTime();
@@ -813,7 +813,7 @@ async function pushToGitHub(shouldShowToast = false) {
                 const fresh = await fetchFromGitHub();
                 if (fresh) {
                     localStorage.setItem(LS_SHA, fresh.sha);
-                    const result = await saveToGitHub({ categories, assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString() }, fresh.sha);
+                    const result = await saveToGitHub({ categories, assetData, profitData, assetHistory, wishes, wishHistory, updatedAt: new Date().toISOString() }, fresh.sha);
                     localStorage.setItem(LS_SHA, result.content.sha);
                     updateSyncStatus('synced');
                     updateLastSyncTime();
@@ -890,7 +890,7 @@ async function testGitHubConnection() {
             showToast('连接成功，文件已存在');
             localStorage.setItem(LS_SHA, result.sha);
         } else {
-            const init = await saveToGitHub({ categories, assetData, profitData, wishes, wishHistory, updatedAt: new Date().toISOString() });
+            const init = await saveToGitHub({ categories, assetData, profitData, assetHistory, wishes, wishHistory, updatedAt: new Date().toISOString() });
             localStorage.setItem(LS_SHA, init.content.sha);
             showToast('连接成功，已创建数据文件');
         }
@@ -1143,8 +1143,8 @@ let currentHomeTab = 'stock';
 let currentCalendarType = 'total';
 let calendarModalDay = null;
 let currentAmount = '0';
-let calendarYear = 2026;
-let calendarMonth = 5;
+let calendarYear = new Date().getFullYear();
+let calendarMonth = new Date().getMonth() + 1;
 
 // 编辑功能状态
 let editSourceType = 'current';
@@ -1887,19 +1887,31 @@ function updateCalSummary() {
     // 更新概览
     const periodLabels = { month: calendarMonth + '月收益', year: calendarYear + '年收益', all: '累计收益' };
     document.getElementById('cal-period-label').textContent = periodLabels[calPeriod];
-    
+
+    // 收益率分母：期初本金 = 当前资产总额 - 本期收益（当前资产 = 期初本金 + 收益）
+    let principal = 0;
+    if (currentCalendarType === 'stock') {
+        principal = (assetData.stock || []).reduce((s, i) => s + i.amount, 0);
+    } else if (currentCalendarType === 'fund') {
+        principal = (assetData.fund || []).reduce((s, i) => s + i.amount, 0);
+    } else {
+        principal = categories.reduce((s, cat) => s + (assetData[cat.key] || []).reduce((ss, i) => ss + i.amount, 0), 0);
+    }
+    const costBase = principal - totalProfit; // 期初本金
+    const profitRate = costBase > 0 ? (totalProfit / costBase) * 100 : 0;
+
     const profitEl = document.getElementById('cal-profit-value');
     const rateEl = document.getElementById('cal-profit-rate');
-    
+
     if (totalProfit >= 0) {
         profitEl.textContent = '+' + Math.round(totalProfit);
         profitEl.style.color = 'var(--ant-red)';
-        rateEl.textContent = '+' + (Math.random() * 2).toFixed(2) + '%';
+        rateEl.textContent = '+' + profitRate.toFixed(2) + '%';
         rateEl.style.color = 'var(--ant-red)';
     } else {
         profitEl.textContent = Math.round(totalProfit);
         profitEl.style.color = 'var(--ant-green)';
-        rateEl.textContent = '-' + (Math.random() * 2).toFixed(2) + '%';
+        rateEl.textContent = profitRate.toFixed(2) + '%';
         rateEl.style.color = 'var(--ant-green)';
     }
     
@@ -2244,8 +2256,8 @@ function saveCalendarProfit() {
 // ============ 图表 ============
 let chartPeriod = 'month'; // month / day / year
 let chartDoughnut = null, chartBar = null, chartLine = null;
-let chartYear = 2026;
-let chartMonth = 5;
+let chartYear = new Date().getFullYear();
+let chartMonth = new Date().getMonth() + 1;
 
 function changeChartYear(delta) {
     chartYear += delta;
@@ -2280,6 +2292,9 @@ function switchChartPeriod(period) {
 }
 
 function renderCharts() {
+    // 同步年/月标签，避免与当前 chartYear/chartMonth 状态不一致（HTML 初始为静态文本）
+    document.getElementById('chart-year-label').textContent = chartYear + '年';
+    document.getElementById('chart-month-label').textContent = chartYear + '年' + chartMonth + '月';
     // 计算各分类总额（从 categories 遍历）
     const catTotals = {};
     categories.forEach(cat => {
@@ -2347,6 +2362,9 @@ function renderCharts() {
     };
 
     let chartLabels, assetDataArr, profitDataArr;
+    // 当前实时总资产：有历史快照的点用快照，无快照的点用它兜底，避免曲线出现断层
+    const liveTotalAsset = categories.reduce((s, cat) =>
+        s + (assetData[cat.key] || []).reduce((ss, i) => ss + i.amount, 0), 0);
     if (isDay) {
         // 按日：显示选中月每日总资产和累计收益
         const daysInMonth = new Date(chartYear, chartMonth, 0).getDate();
@@ -2354,21 +2372,14 @@ function renderCharts() {
         chartLabels = [];
         assetDataArr = [];
         profitDataArr = [];
-        let lastTotal = 0;
         let cumProfit = 0;
         for (let d = 1; d <= daysInMonth; d++) {
             const dateStr = monthPrefix + '-' + String(d).padStart(2, '0');
             const record = assetHistory.find(h => h.date === dateStr);
             const profit = profitData[dateStr];
-            if (record) {
-                lastTotal = record.total;
+            if (record || !isTodayOrFutureBar(chartYear, chartMonth, d)) {
                 chartLabels.push(d + '日');
-                assetDataArr.push(lastTotal);
-                cumProfit += profit ? (profit.total || 0) : 0;
-                profitDataArr.push(cumProfit);
-            } else if (!isTodayOrFutureBar(chartYear, chartMonth, d)) {
-                chartLabels.push(d + '日');
-                assetDataArr.push(lastTotal);
+                assetDataArr.push(record ? record.total : liveTotalAsset);
                 cumProfit += profit ? (profit.total || 0) : 0;
                 profitDataArr.push(cumProfit);
             }
@@ -2387,7 +2398,8 @@ function renderCharts() {
             chartLabels.push(m + '月');
             const monthPrefix = chartYear + '-' + String(m).padStart(2, '0');
             const monthRecords = assetHistory.filter(h => h.date.startsWith(monthPrefix));
-            assetDataArr.push(monthRecords.length > 0 ? monthRecords[monthRecords.length - 1].total : 0);
+            // 有月末快照用快照，否则用实时总资产兜底
+            assetDataArr.push(monthRecords.length > 0 ? monthRecords[monthRecords.length - 1].total : liveTotalAsset);
             // 累计到该月的收益
             Object.keys(profitData).forEach(dateStr => {
                 const d = new Date(dateStr);
@@ -2409,7 +2421,8 @@ function renderCharts() {
         sortedYears.forEach(y => {
             chartLabels.push(y + '年');
             const yearRecords = assetHistory.filter(h => h.date.startsWith(y));
-            assetDataArr.push(yearRecords.length > 0 ? yearRecords[yearRecords.length - 1].total : 0);
+            // 有年末快照用快照，否则用实时总资产兜底
+            assetDataArr.push(yearRecords.length > 0 ? yearRecords[yearRecords.length - 1].total : liveTotalAsset);
             let yearProfit = 0;
             Object.keys(profitData).forEach(dateStr => {
                 const d = new Date(dateStr);
