@@ -2379,7 +2379,11 @@ function renderCharts() {
             const profit = profitData[dateStr];
             if (record || !isTodayOrFutureBar(chartYear, chartMonth, d)) {
                 chartLabels.push(d + '日');
-                assetDataArr.push(record ? record.total : liveTotalAsset);
+                // 今天始终用当前实时总额（快照可能滞后于最新资产）；历史日期用快照，无快照兜底
+                const isToday = chartYear === todayBar.getFullYear()
+                    && chartMonth === todayBar.getMonth() + 1
+                    && d === todayBar.getDate();
+                assetDataArr.push(isToday ? liveTotalAsset : (record ? record.total : liveTotalAsset));
                 cumProfit += profit ? (profit.total || 0) : 0;
                 profitDataArr.push(cumProfit);
             }
@@ -2398,8 +2402,10 @@ function renderCharts() {
             chartLabels.push(m + '月');
             const monthPrefix = chartYear + '-' + String(m).padStart(2, '0');
             const monthRecords = assetHistory.filter(h => h.date.startsWith(monthPrefix));
-            // 有月末快照用快照，否则用实时总资产兜底
-            assetDataArr.push(monthRecords.length > 0 ? monthRecords[monthRecords.length - 1].total : liveTotalAsset);
+            // 当前月始终用实时总资产（快照可能滞后于最新资产）；历史月份有快照用快照，无快照兜底
+            const isCurrentMonth = chartYear === currentYear && m === currentMonth;
+            assetDataArr.push(isCurrentMonth ? liveTotalAsset
+                : (monthRecords.length > 0 ? monthRecords[monthRecords.length - 1].total : liveTotalAsset));
             // 累计到该月的收益
             Object.keys(profitData).forEach(dateStr => {
                 const d = new Date(dateStr);
@@ -2421,8 +2427,10 @@ function renderCharts() {
         sortedYears.forEach(y => {
             chartLabels.push(y + '年');
             const yearRecords = assetHistory.filter(h => h.date.startsWith(y));
-            // 有年末快照用快照，否则用实时总资产兜底
-            assetDataArr.push(yearRecords.length > 0 ? yearRecords[yearRecords.length - 1].total : liveTotalAsset);
+            // 当前年始终用实时总资产（快照可能滞后于最新资产）；历史年份有快照用快照，无快照兜底
+            const isCurrentYear = parseInt(y) === todayBar.getFullYear();
+            assetDataArr.push(isCurrentYear ? liveTotalAsset
+                : (yearRecords.length > 0 ? yearRecords[yearRecords.length - 1].total : liveTotalAsset));
             let yearProfit = 0;
             Object.keys(profitData).forEach(dateStr => {
                 const d = new Date(dateStr);
